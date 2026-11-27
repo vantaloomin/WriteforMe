@@ -14,11 +14,14 @@ export interface FeatureOptions {
     secretLeakCheck: boolean;
     /** A rewritten "story so far" must keep the names, numbers and quotes the one before it held. */
     summaryCheck: boolean;
+    /** Tell the writer which phrases the last few scenes keep reusing, so it stops. */
+    phraseHabitWatch: boolean;
 }
 
 export const DEFAULT_FEATURE_OPTIONS: FeatureOptions = {
     secretLeakCheck: true,
-    summaryCheck: true
+    summaryCheck: true,
+    phraseHabitWatch: true
 };
 
 export function normalizeFeatureOptions(raw: unknown): FeatureOptions {
