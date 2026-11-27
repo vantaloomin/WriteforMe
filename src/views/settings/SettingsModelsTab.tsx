@@ -249,7 +249,7 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
 
                 {/* Provider Switcher */}
                 <div>
-                    <div className="grid grid-cols-2 sm:grid-cols-7 gap-1.5 bg-mist-100 p-1 rounded-xl border border-edge-strong">
+                    <div className="flex flex-wrap gap-1.5 bg-mist-100 p-1 rounded-xl border border-edge-strong">
                         {PROVIDER_TABS.map((p) => (
                             <button
                                 key={p.id}
@@ -273,7 +273,7 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                                         setDevModel(anthropicModel);
                                     }
                                 }}
-                                className={`py-2 px-2 min-h-[38px] flex items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                className={`py-2 px-3 min-h-[38px] flex-1 whitespace-nowrap flex items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                     devProvider === p.id
                                         ? 'bg-btn text-btn-ink shadow-2xs'
                                         : 'text-ink-600 hover:text-ink-900'
@@ -771,9 +771,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                             <span className="text-xs font-bold text-ink-900 uppercase tracking-wider font-mono">
                                 Advanced: Multi-Model Pipeline Routing
                             </span>
-                            <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-gold-tint border border-gold-edge text-gold-ink font-semibold">
-                                Optional
-                            </span>
                         </div>
                         <p className="text-xs text-ink-500 mt-1">
                             Assign specialized models for Review, Prose, and RAG Embeddings. By default, all stages
@@ -798,9 +795,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                                         <span className="text-xs font-bold text-ink-900 uppercase tracking-wider font-mono">
                                             Review Model
                                         </span>
-                                        <span className="text-xs uppercase font-mono px-2.5 py-0.5 rounded-full bg-gold-tint border border-gold-edge text-gold-ink font-semibold">
-                                            Review &amp; Continuity
-                                        </span>
                                     </div>
                                     <p className="text-[11px] text-ink-500 mt-0.5">
                                         Evaluates structure &amp; beats, runs surgical editors (banned words), and
@@ -823,10 +817,7 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-ink-500 uppercase tracking-wider mb-1.5 font-mono">
-                                    Provider
-                                </label>
-                                <div className="grid grid-cols-2 sm:grid-cols-8 gap-1 bg-mist-100 p-1 rounded-xl border border-edge-strong">
+                                <div className="flex flex-wrap gap-1 bg-mist-100 p-1 rounded-xl border border-edge-strong">
                                     {OVERRIDE_PROVIDER_TABS.map((p) => (
                                         <button
                                             key={p.id}
@@ -848,7 +839,7 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                                                     setReviewModel('');
                                                 }
                                             }}
-                                            className={`py-2 px-1.5 min-h-[38px] flex items-center justify-center rounded-lg text-xs font-bold transition-all text-center truncate cursor-pointer ${
+                                            className={`py-2 min-h-[38px] flex items-center justify-center rounded-lg text-xs font-bold transition-all text-center whitespace-nowrap flex-1 px-3 cursor-pointer ${
                                                 reviewProvider === p.id
                                                     ? 'bg-btn text-btn-ink shadow-2xs'
                                                     : 'text-ink-600 hover:text-ink-900'
@@ -863,9 +854,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                             {isRevInherited ? (
                                 <div className="flex items-center justify-between px-3.5 py-2.5 bg-mist-100/80 border border-edge-soft rounded-xl text-xs">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-mono uppercase px-2 py-0.5 rounded bg-mist-200 text-ink-600 font-bold">
-                                            Fallback Active
-                                        </span>
                                         <span className="text-ink-600">
                                             Inheriting Primary:{' '}
                                             <strong className="font-mono text-ink-800">{revConfig.model}</strong> (
@@ -876,9 +864,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                             ) : (
                                 <div className="flex items-center justify-between px-3.5 py-2 bg-gold-tint/40 border border-gold-edge/50 rounded-xl text-xs">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-mono uppercase px-2 py-0.5 rounded bg-gold-tint border border-gold-edge text-gold-ink font-bold">
-                                            Custom Override
-                                        </span>
                                         <span className="text-ink-700">
                                             Dedicated review model:{' '}
                                             <strong className="font-mono text-ink-800">{revConfig.model}</strong> (
@@ -944,9 +929,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                                         <span className="text-xs font-bold text-ink-900 uppercase tracking-wider font-mono">
                                             Prose Model
                                         </span>
-                                        <span className="text-xs uppercase font-mono px-2.5 py-0.5 rounded-full bg-ember-tint border border-ember-edge text-ember-800 font-semibold">
-                                            Prose Generation
-                                        </span>
                                     </div>
                                     <p className="text-[11px] text-ink-500 mt-0.5">
                                         Generates novel manuscript prose scene by scene directly from choreographed
@@ -969,10 +951,7 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-ink-500 uppercase tracking-wider mb-1.5 font-mono">
-                                    Provider
-                                </label>
-                                <div className="grid grid-cols-2 sm:grid-cols-8 gap-1 bg-mist-100 p-1 rounded-xl border border-edge-strong">
+                                <div className="flex flex-wrap gap-1 bg-mist-100 p-1 rounded-xl border border-edge-strong">
                                     {OVERRIDE_PROVIDER_TABS.map((p) => (
                                         <button
                                             key={p.id}
@@ -994,7 +973,7 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                                                     setProseModel('');
                                                 }
                                             }}
-                                            className={`py-2 px-1.5 min-h-[38px] flex items-center justify-center rounded-lg text-xs font-bold transition-all text-center truncate cursor-pointer ${
+                                            className={`py-2 min-h-[38px] flex items-center justify-center rounded-lg text-xs font-bold transition-all text-center whitespace-nowrap flex-1 px-3 cursor-pointer ${
                                                 proseProvider === p.id
                                                     ? 'bg-btn text-btn-ink shadow-2xs'
                                                     : 'text-ink-600 hover:text-ink-900'
@@ -1009,9 +988,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                             {isPrsInherited ? (
                                 <div className="flex items-center justify-between px-3.5 py-2.5 bg-mist-100/80 border border-edge-soft rounded-xl text-xs">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-mono uppercase px-2 py-0.5 rounded bg-mist-200 text-ink-600 font-bold">
-                                            Fallback Active
-                                        </span>
                                         <span className="text-ink-600">
                                             Inheriting Primary:{' '}
                                             <strong className="font-mono text-ink-800">{prsConfig.model}</strong> (
@@ -1022,9 +998,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                             ) : (
                                 <div className="flex items-center justify-between px-3.5 py-2 bg-gold-tint/40 border border-gold-edge/50 rounded-xl text-xs">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-mono uppercase px-2 py-0.5 rounded bg-gold-tint border border-gold-edge text-gold-ink font-bold">
-                                            Custom Override
-                                        </span>
                                         <span className="text-ink-700">
                                             Dedicated prose model:{' '}
                                             <strong className="font-mono text-ink-800">{prsConfig.model}</strong> (
@@ -1087,13 +1060,13 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                             <label className="block text-xs font-bold text-ink-700 uppercase tracking-wider font-mono">
                                 Embedding Provider (RAG)
                             </label>
-                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 bg-mist-100 p-1 rounded-xl border border-edge-strong">
+                            <div className="flex flex-wrap gap-1.5 bg-mist-100 p-1 rounded-xl border border-edge-strong">
                                 {EMBEDDING_PROVIDER_TABS.map((p) => (
                                     <button
                                         key={p.id}
                                         type="button"
                                         onClick={() => setEmbeddingProvider(p.id)}
-                                        className={`py-2 px-2 min-h-[38px] flex items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                        className={`py-2 px-3 min-h-[38px] flex-1 whitespace-nowrap flex items-center justify-center rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                             embeddingProvider === p.id
                                                 ? 'bg-btn text-btn-ink shadow-2xs'
                                                 : 'text-ink-600 hover:text-ink-900'
