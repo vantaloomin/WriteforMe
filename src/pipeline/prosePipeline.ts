@@ -29,6 +29,7 @@ import {
     runContinuityAuditor,
     type ContinuityStoryState
 } from '@/domain/continuity';
+import { isRevealDueThisBook, isSeriesStory } from '@/domain/series';
 import { formatSlopAuditForPrompt, scanTextForSlop } from '@/domain/slop';
 import {
     actForSequence,
@@ -77,6 +78,7 @@ import {
 } from '@/utils';
 import {
     asArray,
+    asNumber,
     asOptionalRecord,
     asRecord,
     asString,
@@ -89,6 +91,7 @@ import { DIRECTIVE_REVIEW_OUTPUT_FORMAT_SCHEMA } from './directiveReview';
 import { runAgentWithEscalation } from './escalation';
 import { buildProseContext, type ProseContextCastMember } from './proseContext';
 import { generateScenes } from './sceneBlueprints';
+import { auditTextAgainstContract } from './series';
 import { applySurgicalEditsWithRetry, applySurgicalProsePatch } from './surgicalPatch';
 import { runAudioDramaVoiceDirectorPass } from './voiceDirector';
 
@@ -1589,6 +1592,18 @@ ${isAudioDramaStory ? 'Begin writing current scene audio drama script.' : 'Begin
             tierName: 'Writing Agent',
             isAutopilot: autoP,
             initialGenOutput: initialAgenticOutput,
+            // Series only: prose in the final sequences must respect the ending contract.
+            gateFn:
+                isSeriesStory(storyToUse) &&
+                seq >= asArray(storyToUse.sequences).length - 2
+                    ? (genOutput) =>
+                          auditTextAgainstContract(
+                              ctx,
+                              ctx.getStory() || storyToUse,
+                              extractTag(genOutput, 'prose_text') || genOutput,
+                              'prose'
+                          )
+                    : null,
             context: {
                 ...scene,
                 rollingDialogueStats,
@@ -2242,6 +2257,10 @@ ${auditLines}
                       const revSeq = Number(revealAnchor.sequence_number || 0);
                       const revScene = Number(revealAnchor.scene_number || 1);
                       if (
+                          isRevealDueThisBook(
+                              sCopy as Parameters<typeof isRevealDueThisBook>[0],
+                              asNumber(asRecord(prev.series).book_number, 0)
+                          ) &&
                           revSeq === currentSeqNumForVault &&
                           (revScene === currentSceneNumForVault ||
                               revScene <= 0 ||

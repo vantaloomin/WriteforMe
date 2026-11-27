@@ -292,6 +292,8 @@ export interface DashboardViewProps {
         options?: Record<string, unknown>
     ) => void | Promise<void>;
     generateStoryArc: () => void | Promise<void>;
+    /** Starts the next book of the series from this story. Absent hides the action. */
+    startNextBook?: (input: { title?: string; concept: string; seriesTitle?: string }) => void | Promise<unknown>;
     epistemicViewTab: string;
     setEpistemicViewTab: (tab: string) => void;
     epistemicScrubberCoord: string;
