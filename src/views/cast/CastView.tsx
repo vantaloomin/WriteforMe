@@ -24,6 +24,7 @@ import {
 } from '@/domain/audio';
 import { cardToCastMember } from '@/domain/imports';
 import { openCardFile } from '@/services/documents';
+import { CastBoardPanel } from './CastBoardPanel';
 
 export type CastCharacterRecord = CharacterCardCharacter & {
     name: string;
@@ -292,6 +293,8 @@ export function CastView({
                     </button>
                 </div>
             </div>
+
+            <CastBoardPanel story={story} setStory={(updater) => setStory(updater)} />
 
             {/* Cast Cards Grid */}
             <div className="flex flex-col gap-6">
