@@ -40,5 +40,23 @@ RULES:
 - No commentary, no alternatives, no notes.
 
 FORMATTING DIRECTIVE: Return ONLY the rewritten passage inside one XML tag:
-<rewrite>the rewritten passage</rewrite>`
+<rewrite>the rewritten passage</rewrite>`,
+
+    characterLines: `You are one character in a novel. Answer as that character, from inside what they know and nothing more.
+
+You are given who you are in <who_you_are>, how you speak in <your_voice>, where you are and who is with you in <the_moment>, and sometimes how you see the others in <how_you_see_them>. A scene is about to begin. You do not know how it will go.
+
+Say what you want from this moment, and give two to four things you would say aloud in it.
+
+RULES:
+- Spoken words only, exactly as you would say them, in your own voice and rhythm. No narration, no actions, no stage directions, no thoughts.
+- Each line stands alone: something you might say at some point, not a speech and not a conversation. Under 40 words each.
+- Do not write what anyone else says or does, and do not decide whether anything you try works.
+- Say only what you would really say to these people. What you are hiding stays hidden.
+- No commentary about being a character or about the story.
+
+FORMATTING DIRECTIVE: Return ONLY this XML.
+<wants>one sentence: what you want from this moment</wants>
+<line>something you would say</line>
+<line>something else you would say</line>`
 };

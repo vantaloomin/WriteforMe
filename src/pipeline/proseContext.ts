@@ -134,75 +134,29 @@ export interface BuildProseContextParams {
     existingProseText?: string;
     existingCritique?: string;
     forceFullRewrite?: boolean;
+    /** What the characters said they would say in this scene (pipeline/characterLines), or ''. */
+    characterLinesBlock?: string;
 }
 
-/**
- * Compiles the 4-tier cache-friendly XML context string consumed by prose drafting,
- * rewrite, and Audio Drama Writing Agent prompts.
- */
-export function buildProseContext({
-    storyToUse = {},
-    scene = {} as SceneBlueprint & Record<string, unknown>,
-    sequenceData = null,
-    s = 0,
-    seq = 0,
-    actData = null,
-    activeCast = [],
-    loreContext = '',
-    previousScene = null,
-    previousSceneProseText = null,
-    enableNarrativeLenses = false,
-    activeModeId = 'BASELINE_NEUTRAL',
-    narrativeModeObj = null,
-    injectionPrompt = '',
-    dInst = '',
-    rollingDialogueStats = [],
-    existingProseText = '',
-    existingCritique = '',
-    forceFullRewrite = false
-}: BuildProseContextParams = {}): string {
-    const seqObj = (sequenceData || {}) as Partial<Sequence> & Record<string, unknown>;
-    const actInfo =
-        actData ||
-        (storyToUse.acts
-            ? (storyToUse.acts.find(
-                  (a) => parseActNumber(a.number) === parseActNumber(seqObj.parent_act || 1)
-              ) as (Act & Record<string, unknown>) | undefined) || null
-            : null);
-
-    const currentSeqNum = Number(seqObj.number || seq + 1 || 1);
-
-    // Epistemic Sanitization: Filter unrevealed secrets for current position
-    const unrevealedSecrets = Array.isArray(storyToUse.secret_vault)
+/** The secrets the story has not revealed by this sequence. */
+export function unrevealedSecretsAt(storyToUse: ProseContextStoryInput, currentSeqNum: number) {
+    return Array.isArray(storyToUse.secret_vault)
         ? storyToUse.secret_vault.filter(
               (sec) =>
                   sec.status !== 'revealed' &&
                   Number(sec.reveal_anchor?.sequence_number || 7) > currentSeqNum
           )
         : [];
+}
 
+/** The cast as a prompt may show it: cover-story masks applied and unrevealed truths scrubbed. */
+export function sanitizeActiveCast(
+    activeCast: ProseContextCastMember[] | null | undefined,
+    unrevealedSecrets: ReturnType<typeof unrevealedSecretsAt>
+): ProseContextCastMember[] {
     // Cast names are all over the story, so they identify no secret on their own.
     const castNameWords = (activeCast || []).map((ch) => String(ch?.name || '')).filter(Boolean);
-
-    // Sanitize Act Mandate so future twists are not leaked in Act Context
-    let sanitizedActMandate = actInfo
-        ? String(actInfo.act_mandate || actInfo.description || '')
-        : '';
-    if (unrevealedSecrets.length > 0 && sanitizedActMandate && actInfo) {
-        unrevealedSecrets.forEach((sec) => {
-            if (Number(sec.reveal_anchor?.act_number || 3) > Number(actInfo.number || 1)) {
-                sanitizedActMandate = scrubSecretFromText(sanitizedActMandate, sec, {
-                    placeholder: '[Crucial Turning Point Withheld]',
-                    titlePlaceholder: '[Key Reversal Pending]',
-                    ignoreWords: castNameWords,
-                    minTruthLength: 8
-                });
-            }
-        });
-    }
-
-    // Sanitize Active Cast: Apply cover story masks & scrub unrevealed secret truths
-    const sanitizedActiveCast = (activeCast || []).map((ch) => {
+    return (activeCast || []).map((ch) => {
         if (!ch) return ch;
         const cloned: ProseContextCastMember = { ...ch, details: { ...(ch.details || {}) } };
         unrevealedSecrets.forEach((sec) => {
@@ -237,6 +191,70 @@ export function buildProseContext({
         });
         return cloned;
     });
+}
+
+/**
+ * Compiles the 4-tier cache-friendly XML context string consumed by prose drafting,
+ * rewrite, and Audio Drama Writing Agent prompts.
+ */
+export function buildProseContext({
+    storyToUse = {},
+    scene = {} as SceneBlueprint & Record<string, unknown>,
+    sequenceData = null,
+    s = 0,
+    seq = 0,
+    actData = null,
+    activeCast = [],
+    loreContext = '',
+    previousScene = null,
+    previousSceneProseText = null,
+    enableNarrativeLenses = false,
+    activeModeId = 'BASELINE_NEUTRAL',
+    narrativeModeObj = null,
+    injectionPrompt = '',
+    dInst = '',
+    rollingDialogueStats = [],
+    existingProseText = '',
+    existingCritique = '',
+    forceFullRewrite = false,
+    characterLinesBlock = ''
+}: BuildProseContextParams = {}): string {
+    const seqObj = (sequenceData || {}) as Partial<Sequence> & Record<string, unknown>;
+    const actInfo =
+        actData ||
+        (storyToUse.acts
+            ? (storyToUse.acts.find(
+                  (a) => parseActNumber(a.number) === parseActNumber(seqObj.parent_act || 1)
+              ) as (Act & Record<string, unknown>) | undefined) || null
+            : null);
+
+    const currentSeqNum = Number(seqObj.number || seq + 1 || 1);
+
+    // Epistemic Sanitization: Filter unrevealed secrets for current position
+    const unrevealedSecrets = unrevealedSecretsAt(storyToUse, currentSeqNum);
+
+    // Cast names are all over the story, so they identify no secret on their own.
+    const castNameWords = (activeCast || []).map((ch) => String(ch?.name || '')).filter(Boolean);
+
+    // Sanitize Act Mandate so future twists are not leaked in Act Context
+    let sanitizedActMandate = actInfo
+        ? String(actInfo.act_mandate || actInfo.description || '')
+        : '';
+    if (unrevealedSecrets.length > 0 && sanitizedActMandate && actInfo) {
+        unrevealedSecrets.forEach((sec) => {
+            if (Number(sec.reveal_anchor?.act_number || 3) > Number(actInfo.number || 1)) {
+                sanitizedActMandate = scrubSecretFromText(sanitizedActMandate, sec, {
+                    placeholder: '[Crucial Turning Point Withheld]',
+                    titlePlaceholder: '[Key Reversal Pending]',
+                    ignoreWords: castNameWords,
+                    minTruthLength: 8
+                });
+            }
+        });
+    }
+
+    // Sanitize Active Cast: Apply cover story masks & scrub unrevealed secret truths
+    const sanitizedActiveCast = sanitizeActiveCast(activeCast, unrevealedSecrets);
 
     const clueDirectivesBlock = '';
     const revealDirectiveBlock = '';
@@ -656,7 +674,7 @@ ${atmosphericOverviewBlock}
 ${modalityHandBlock}
 ${activeLensBlock}
 ${upcomingBoundaryBlock}
-${dialogueTargetBlock}${phraseHabitsBlock}
+${dialogueTargetBlock}${phraseHabitsBlock}${characterLinesBlock ? `\n${characterLinesBlock}` : ''}
 ${cachePoint}${
     !forceFullRewrite && existingProseText
         ? `

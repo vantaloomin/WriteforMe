@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import { CHARACTER_LINES_CHOICES, isCharacterLinesMode } from '@/domain/cast';
 import { useFeatureOptionsStore, type FeatureOptions } from '@/stores';
 
 type BooleanOption = { [K in keyof FeatureOptions]: FeatureOptions[K] extends boolean ? K : never }[keyof FeatureOptions];
@@ -61,6 +62,32 @@ export const SettingsFeatureOptions: React.FC = () => {
                     </button>
                 </div>
             ))}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-inset border border-edge-strong rounded-xl">
+                <div className="space-y-0.5 pr-4">
+                    <span className="text-xs font-bold text-ink-900 uppercase tracking-wider font-mono">
+                        Characters Write Their Own Lines
+                    </span>
+                    <p className="text-xs text-ink-500">
+                        Before a scene is written, each main character in it (up to four) is asked, as themselves and
+                        knowing only what they know, what they want and what they would say. The writer is given those
+                        lines to work in. Adds one call per character per scene, so it costs more and takes longer.
+                    </p>
+                </div>
+                <select
+                    value={options.characterLines}
+                    onChange={(e) => {
+                        if (isCharacterLinesMode(e.target.value)) setOption('characterLines', e.target.value);
+                    }}
+                    aria-label="Characters write their own lines"
+                    className="px-2.5 py-1.5 rounded-lg border border-edge-strong bg-surface text-xs text-ink-900 outline-none sm:max-w-xs"
+                >
+                    {CHARACTER_LINES_CHOICES.map((choice) => (
+                        <option key={choice.value} value={choice.value}>
+                            {choice.label}
+                        </option>
+                    ))}
+                </select>
+            </div>
         </>
     );
 };
