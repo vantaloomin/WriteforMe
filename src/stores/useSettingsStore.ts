@@ -30,6 +30,7 @@ import type { ComfyOptionsCatalog, ComfyStatusInfo } from '@/services/images';
 import type {
     CodexModelInfo,
     GeminiImageModelInfo,
+    OpenRouterImageModelInfo,
     ProviderModelSettings,
     ThinkingBudgetSettings
 } from '@/services/llm';
@@ -124,6 +125,7 @@ export interface SettingsState {
     audioDramaSettings: AudioDramaSettings;
     geminiModelsList: string[];
     geminiImageModelsList: GeminiImageModelInfo[];
+    openRouterImageModelsList: OpenRouterImageModelInfo[];
     openRouterModelsList: ModelDescriptor[];
     nanoGptModelsList: ModelDescriptor[];
     codexModelsList: CodexModelInfo[];
@@ -349,6 +351,10 @@ export function readInitialSettingsState(): SettingsState {
         geminiModelsList: [],
         geminiImageModelsList: readSessionJson<GeminiImageModelInfo[]>(
             STORAGE_KEYS.geminiImageModelsCache,
+            []
+        ),
+        openRouterImageModelsList: readSessionJson<OpenRouterImageModelInfo[]>(
+            STORAGE_KEYS.openRouterImageModelsCache,
             []
         ),
         openRouterModelsList: readStorageJson<ModelDescriptor[]>(

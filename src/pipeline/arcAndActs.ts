@@ -4,7 +4,7 @@
  */
 
 import { isModelStop } from '@/services/llm';
-import { STORAGE_KEYS } from '@/config';
+import { formatActFunctionGuideXml, STORAGE_KEYS } from '@/config';
 import {
     buildSequencePromptContext,
     type ContinuityStoryState
@@ -554,6 +554,8 @@ ${threads.map((t) => `<thread><thread_id>${asString(t.id)}</thread_id><name>${as
 ${cast.map((c) => `- ${c.name} (${c.role})`).join('\n')}
 </cast_list>
 
+${formatActFunctionGuideXml()}
+
 <output_format_description>
 FORMATTING DIRECTIVE: Return your act structure strictly as XML tags. Do not use YAML or markdown blocks.
 CRITICAL XML RULE: Enclose the entire response in <response>...</response>.
@@ -685,6 +687,8 @@ ${formatObjectToXml(threads)}
 <cast_list>
 ${cast.map((c) => `- ${c.name} (${c.role})`).join('\n')}
 </cast_list>
+
+${formatActFunctionGuideXml()}
 
 <output_format_description>
 FORMATTING DIRECTIVE: Return your evaluation strictly as XML tags. Do not use YAML or markdown blocks.
