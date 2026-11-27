@@ -23,6 +23,8 @@ export interface FeatureOptions {
     summaryCheck: boolean;
     /** Tell the writer which phrases the last few scenes keep reusing, so it stops. */
     phraseHabitWatch: boolean;
+    /** When a new scene names someone the record holds dead, have those paragraphs checked and put right. */
+    deadCharacterCheck: boolean;
     /** Tell Claude where the repeated start of the scene-writing prompt ends, so it is cached. */
     promptCacheMarks: boolean;
     /** Hold lore the model adds by itself for the author to approve, instead of adding it at once. */
@@ -41,6 +43,7 @@ export const DEFAULT_FEATURE_OPTIONS: FeatureOptions = {
     secretLeakCheck: true,
     summaryCheck: true,
     phraseHabitWatch: true,
+    deadCharacterCheck: true,
     promptCacheMarks: true,
     reviewNewLore: false,
     characterLines: 'off',
