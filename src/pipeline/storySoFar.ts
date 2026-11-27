@@ -4,6 +4,8 @@
  */
 
 import { formatSeriesThreadStatus } from '@/domain/series';
+import { checkedSummary, summaryMustKeep } from '@/domain/story';
+import { getFeatureOptions } from '@/stores';
 import { PROMPTS } from '@/prompts';
 import type { Story } from '@/types';
 import { decodeXmlEntities } from '@/utils';
@@ -92,11 +94,12 @@ ${draftedScenes.join('\n')}
 ${asString(currentStory.story_so_far) || 'None.'}
 </existing_story_so_far>
 ${formatSeriesThreadStatus(currentStory as Partial<Story>).trimEnd()}`;
+        const draftSummary = async (note: string): Promise<string> => {
         const res = await runAgentWithEscalation<{ story_so_far: string }>(ctx, {
             tierName: 'Story So Far Agent',
             isAutopilot,
             generatorPromptFn: () => `
-${getContext()}
+${getContext()}${note ? `\n${note}` : ''}
 <output_format_description>
 FORMATTING DIRECTIVE: Return strictly as XML tags. Do not use markdown blocks.
 CRITICAL XML RULE: Enclose the entire response in <response>...</response>.
@@ -151,7 +154,32 @@ Output Schema:
             spawningContext: 'Story So Far Update'
         });
 
-        return res?.parsedData?.story_so_far || asString(currentStory.story_so_far);
+        return res?.parsedData?.story_so_far || '';
+        };
+
+        const previous = asString(currentStory.story_so_far);
+        if (!getFeatureOptions().summaryCheck || !previous.trim()) {
+            return (await draftSummary('')) || previous;
+        }
+        // Before the new summary replaces the old one: every name, number and quote it held must survive.
+        const mustKeep = summaryMustKeep({
+            before: previous,
+            folded: draftedScenes.join('\n'),
+            knownNames: asArray<Record<string, unknown>>(currentStory.cast).map((c) => asString(c.name))
+        });
+        const checked = await checkedSummary(draftSummary, mustKeep);
+        if (checked.retried) {
+            ctx.logPipelineValidation(
+                'Story So Far: summary check',
+                checked.missing.length === 0,
+                checked.missing.length === 0
+                    ? 'The first draft dropped details the earlier summary held. The second draft kept them all.'
+                    : `Added back after the summary: ${checked.missing.map((item) => item.text).join('; ')}`,
+                null,
+                { tierName: 'Story So Far Agent', type: 'summary_check' }
+            );
+        }
+        return checked.text || previous;
     } catch (e) {
         console.error('Story So Far generation failed:', e);
         return asString(currentStory.story_so_far);
