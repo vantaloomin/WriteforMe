@@ -24,7 +24,8 @@ import {
     type StylizedBlankCoverProps
 } from '@/components';
 import type { StoryResetStageKey } from '@/domain/lifecycle';
-import { getCoverStyleIndex } from '@/domain/story';
+import { findNextUnwrittenScene, getCoverStyleIndex } from '@/domain/story';
+import { useUiStore } from '@/stores';
 import { storyStore } from '@/services/storage';
 import type { DashboardAudioSummary, DashboardStory } from './types';
 
@@ -113,10 +114,16 @@ export function DashboardFolioSidebar({
     totalWords,
     readingTimeDisplay
 }: DashboardFolioSidebarProps) {
+    const setSelectedSequence = useUiStore((s) => s.setSelectedSequence);
+    const setSelectedScene = useUiStore((s) => s.setSelectedScene);
+    const nextScene = findNextUnwrittenScene(
+        story as unknown as Parameters<typeof findNextUnwrittenScene>[0]
+    );
+
     return (
-        <div className="w-full lg:w-[360px] xl:w-[400px] shrink-0 space-y-6 lg:sticky lg:top-24">
+        <div className="contents lg:block lg:w-[360px] xl:w-[400px] shrink-0 lg:space-y-6 lg:sticky lg:top-24">
             {/* Tactile Book Cover Frame */}
-            <div className="bg-surface p-5 rounded-2xl border border-edge shadow-sm">
+            <div className="order-last lg:order-none bg-surface p-5 rounded-2xl border border-edge shadow-sm">
                 <div className="book-cover-frame mx-auto max-w-[280px]">
                     {/* Spine crease & shading overlays */}
                     <div className="book-spine-shadow" />
@@ -175,12 +182,10 @@ export function DashboardFolioSidebar({
                                         : getCoverStyleIndex(story.id || story.title);
                                 const nextStyle = (currentStyle + 1) % 8;
                                 setStory((prev) => ({ ...prev, coverStyle: nextStyle }));
-                                storyStore.saveStory(
-                                    story.id,
-                                    { ...story, coverStyle: nextStyle } as unknown as Parameters<
-                                        typeof storyStore.saveStory
-                                    >[1]
-                                );
+                                storyStore.saveStory(story.id, {
+                                    ...story,
+                                    coverStyle: nextStyle
+                                } as unknown as Parameters<typeof storyStore.saveStory>[1]);
                                 showToast('Cover typography updated', 'info');
                             }}
                         />
@@ -230,77 +235,75 @@ export function DashboardFolioSidebar({
                 </div>
             </div>
 
-            {/* Folio Analytics Card */}
-            <div className="bg-surface p-5 rounded-2xl border border-edge shadow-sm space-y-4">
-                <div className="flex items-center justify-between pb-2 border-b border-edge-soft">
-                    <span className="text-xs font-bold text-ink-500 uppercase tracking-wider font-mono">
-                        Manuscript Telemetry
+            {/* Progress card: on a phone it sits right under the title once scenes exist */}
+            <div
+                className={`${allScenesCount > 0 ? '-order-2' : ''} lg:order-none bg-surface p-5 rounded-2xl border border-edge shadow-sm space-y-4`}
+            >
+                <div className="flex items-baseline gap-2.5">
+                    <span className="text-4xl leading-none font-bold font-serif text-gold-ink">
+                        {progressPercent}%
                     </span>
-                    <span className="text-xs font-bold text-gold-ink font-mono">
-                        {progressPercent}% Drafted
+                    <span className="text-sm text-ink-600">
+                        {draftedScenesCount} of {allScenesCount} scenes written
                     </span>
                 </div>
 
-                {/* Progress Bar */}
-                <div className="space-y-1">
-                    <div className="w-full bg-mist-100 h-2 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-gold rounded-full transition-all duration-500"
-                            style={{ width: `${progressPercent}%` }}
-                        />
-                    </div>
-                    <div className="flex justify-between text-xs text-ink-500 pt-0.5">
-                        <span>
-                            {draftedScenesCount} of {allScenesCount} Scenes
-                        </span>
-                        <span>
-                            {story.acts?.length || 0} Acts / {story.sequences?.length || 0} Seqs
-                        </span>
-                    </div>
+                <div className="w-full bg-mist-100 h-2 rounded-full overflow-hidden">
+                    <div
+                        className="h-full bg-gold rounded-full transition-all duration-500"
+                        style={{ width: `${progressPercent}%` }}
+                    />
                 </div>
 
-                {/* Key Metrics Grid */}
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                    <div className="bg-inset p-3 rounded-xl border border-edge-soft">
-                        <span className="text-xs font-bold text-ink-500 uppercase font-mono block mb-1">
-                            Prose Words
-                        </span>
-                        <span className="text-lg font-bold font-serif text-ink-900">
-                            {totalWords.toLocaleString()}
-                        </span>
-                    </div>
-                    <div className="bg-inset p-3 rounded-xl border border-edge-soft">
-                        <span className="text-xs font-bold text-ink-500 uppercase font-mono block mb-1">
-                            Reading Time
-                        </span>
-                        <span className="text-lg font-bold font-serif text-ink-900">
-                            ~{readingTimeDisplay}
-                        </span>
-                    </div>
-                    <div className="bg-inset p-3 rounded-xl border border-edge-soft">
-                        <span className="text-xs font-bold text-ink-500 uppercase font-mono block mb-1">
-                            Cast Size
-                        </span>
-                        <span className="text-lg font-bold font-serif text-ink-900">
-                            {story.cast?.length || 0}
-                        </span>
-                    </div>
-                    <div className="bg-inset p-3 rounded-xl border border-edge-soft">
-                        <span className="text-xs font-bold text-ink-500 uppercase font-mono block mb-1">
-                            Plot Threads
-                        </span>
-                        <span className="text-lg font-bold font-serif text-ink-900">
-                            {story.threads?.length || 0}
-                        </span>
-                    </div>
+                <div className="flex flex-wrap gap-x-5 gap-y-1 text-[13px] text-ink-600">
+                    <span>
+                        <strong className="text-ink-900">{totalWords.toLocaleString()}</strong>{' '}
+                        words
+                    </span>
+                    <span>
+                        <strong className="text-ink-900">{readingTimeDisplay}</strong> to read
+                    </span>
+                    <span>
+                        <strong className="text-ink-900">{story.cast?.length || 0}</strong> cast
+                    </span>
                 </div>
+
+                {nextScene && (
+                    <div className="pt-4 border-t border-edge-soft space-y-3">
+                        <div>
+                            <span className="block text-[13px] text-ink-500">Next</span>
+                            <span className="block text-lg leading-snug font-bold font-serif text-ink-900">
+                                Scene {nextScene.label}
+                                {nextScene.title ? ` · ${nextScene.title}` : ''}
+                            </span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setSelectedSequence(nextScene.sequenceIndex);
+                                setSelectedScene(nextScene.sceneIndex);
+                                setView('writer');
+                            }}
+                            className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-btn hover:bg-btn-hover text-btn-ink font-bold text-sm shadow-sm flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+                        >
+                            Continue writing
+                        </button>
+                    </div>
+                )}
 
                 {/* Enter Reading Mode Button */}
                 <button
                     onClick={() => enterReaderMode()}
-                    className="w-full mt-3 py-2.5 px-4 rounded-xl bg-btn hover:bg-btn-hover text-btn-ink font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+                    className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer ${
+                        nextScene
+                            ? 'bg-surface hover:bg-lift border border-edge-strong text-ink-800'
+                            : 'bg-btn hover:bg-btn-hover text-btn-ink'
+                    }`}
                 >
-                    <BookOpen size={14} className="text-btn-accent" />
+                    <BookOpen
+                        size={14}
+                        className={nextScene ? 'text-gold-ink' : 'text-btn-accent'}
+                    />
                     <span>
                         {readingProgress.sequenceIndex !== undefined
                             ? 'Resume Reading'

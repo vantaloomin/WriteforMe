@@ -8,23 +8,18 @@
 
 import {
     CollapsibleProse,
+    FoldedSection,
     Book,
     CheckCircle2,
-    Compass,
     Edit3,
     EditButton,
     EditorialSubNav,
-    Feather,
-    GitBranch,
     Headphones,
-    Layers,
     Loader2,
     Plus,
     Shuffle,
-    Sliders,
     Sparkles,
     Trash2,
-    Users,
     Workflow,
     type EditorialSubNavProps
 } from '@/components';
@@ -139,7 +134,7 @@ export function DashboardView({
                 selectedScene={selectedScene}
             />
             {/* Split Layout: Left Column (Book Cover & Folio Stats), Right Column (Editorial Canvas) */}
-            <div className="flex flex-col lg:flex-row gap-8 items-start">
+            <div className="flex flex-col lg:flex-row gap-4 lg:gap-8 items-stretch lg:items-start">
                 <DashboardFolioSidebar
                     story={story}
                     setStory={setStory}
@@ -179,7 +174,7 @@ export function DashboardView({
                 />
 
                 {/* RIGHT COLUMN: Rich Editorial Canvas (Full-Width Stacked Structure) */}
-                <div className="flex-1 space-y-6 min-w-0 w-full">
+                <div className="contents lg:block flex-1 lg:space-y-6 min-w-0 w-full">
                     {story?.id &&
                         initializingStoryId === story.id &&
                         (() => {
@@ -205,7 +200,7 @@ export function DashboardView({
                             const isCastDone = castTotal > 0 && interviewedTotal >= castTotal;
                             const isArcDone = Boolean(story.core_thematic_argument);
                             return (
-                                <div className="bg-surface p-5 sm:p-6 rounded-2xl border border-gold-edge shadow-sm space-y-4 animate-fade-in">
+                                <div className="-order-3 lg:order-none bg-surface p-5 sm:p-6 rounded-2xl border border-gold-edge shadow-sm space-y-4 animate-fade-in">
                                     <div className="flex flex-wrap items-center justify-between gap-3">
                                         <div className="flex items-center gap-3 min-w-0">
                                             <div className="w-9 h-9 rounded-xl bg-gold-tint border border-gold-edge text-gold-ink flex items-center justify-center shrink-0">
@@ -299,7 +294,7 @@ export function DashboardView({
                         story.concept &&
                         !story.status_quo &&
                         (!story.cast || story.cast.length === 0) && (
-                            <div className="bg-surface p-5 rounded-2xl border border-edge-strong shadow-sm flex flex-wrap items-center justify-between gap-3">
+                            <div className="-order-3 lg:order-none bg-surface p-5 rounded-2xl border border-edge-strong shadow-sm flex flex-wrap items-center justify-between gap-3">
                                 <div>
                                     <div className="text-xs font-bold text-ink-900 font-serif">
                                         Story Bible Ready to Initialize
@@ -320,8 +315,8 @@ export function DashboardView({
                             </div>
                         )}
 
-                    {/* Core Story Blueprint Card */}
-                    <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-edge shadow-sm space-y-6">
+                    {/* Title */}
+                    <div className="-order-4 lg:order-none bg-surface px-5 sm:px-8 py-4 rounded-2xl border border-edge shadow-sm">
                         <div>
                             <input
                                 aria-label="Story title"
@@ -333,115 +328,44 @@ export function DashboardView({
                                 placeholder="Untitled Story"
                             />
                         </div>
+                    </div>
 
-                        <div className="pt-2 border-t border-edge-soft space-y-2">
-                            <div
-                                className="grid grid-cols-2 p-1 bg-inset rounded-xl border border-edge gap-1"
-                                role="radiogroup"
-                                aria-label="Writing Mode"
-                            >
-                                <button
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={story.writing_mode !== 'audio_drama'}
-                                    onClick={() => {
-                                        if (story.writing_mode === 'novel') return;
-                                        setStory((prev) => {
-                                            const updated = { ...prev, writing_mode: 'novel' };
-                                            if (storyStore?.saveStory && updated.id) {
-                                                storyStore
-                                                    .saveStory(
-                                                        updated.id,
-                                                        updated as unknown as Parameters<
-                                                            typeof storyStore.saveStory
-                                                        >[1]
-                                                    )
-                                                    .catch((err) =>
-                                                        console.warn(
-                                                            'Failed saving writing mode change:',
-                                                            err
-                                                        )
-                                                    );
-                                            }
-                                            return updated;
-                                        });
-                                        showToast('Writing mode switched to Novel', 'info');
-                                    }}
-                                    className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                                        story.writing_mode !== 'audio_drama'
-                                            ? 'bg-surface text-ink-900 shadow-2xs border border-edge-strong'
-                                            : 'text-ink-500 hover:text-ink-800'
-                                    }`}
-                                >
-                                    <Book
-                                        size={14}
-                                        className={
-                                            story.writing_mode !== 'audio_drama'
-                                                ? 'text-gold-ink'
-                                                : 'text-ink-400'
-                                        }
-                                    />
-                                    <span>Novel</span>
-                                </button>
-                                <button
-                                    type="button"
-                                    role="radio"
-                                    aria-checked={story.writing_mode === 'audio_drama'}
-                                    onClick={() => {
-                                        if (story.writing_mode === 'audio_drama') return;
-                                        setStory((prev) => {
-                                            const updated = {
-                                                ...prev,
-                                                writing_mode: 'audio_drama'
-                                            };
-                                            if (storyStore?.saveStory && updated.id) {
-                                                storyStore
-                                                    .saveStory(
-                                                        updated.id,
-                                                        updated as unknown as Parameters<
-                                                            typeof storyStore.saveStory
-                                                        >[1]
-                                                    )
-                                                    .catch((err) =>
-                                                        console.warn(
-                                                            'Failed saving writing mode change:',
-                                                            err
-                                                        )
-                                                    );
-                                            }
-                                            return updated;
-                                        });
-                                        showToast('Writing mode switched to Audio Drama', 'info');
-                                    }}
-                                    className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                                        story.writing_mode === 'audio_drama'
-                                            ? 'bg-surface text-ink-900 shadow-2xs border border-edge-strong'
-                                            : 'text-ink-500 hover:text-ink-800'
-                                    }`}
-                                >
-                                    <Headphones
-                                        size={14}
-                                        className={
-                                            story.writing_mode === 'audio_drama'
-                                                ? 'text-gold-ink'
-                                                : 'text-ink-400'
-                                        }
-                                    />
-                                    <span>Audio Drama</span>
-                                </button>
-                            </div>
-                            <p className="text-xs text-ink-500 italic font-serif">
-                                {story.writing_mode === 'audio_drama'
-                                    ? 'Generates multi-voice audio drama-style scripts for audio generation.'
-                                    : 'Generates standard narrative prose with rich scene description, narrative pacing, and dialogue tags.'}
-                            </p>
-                        </div>
-
-                        {/* Concept & Logline */}
-                        <div className="pt-4 border-t border-edge-soft space-y-2">
+                    {/* Story So Far */}
+                    {story.story_so_far && (
+                        <div className="-order-1 lg:order-none bg-surface p-5 sm:p-8 rounded-2xl border border-edge shadow-sm space-y-2">
                             <div className="flex justify-between items-center">
-                                <span className="text-xs font-bold text-ink-500 uppercase tracking-wider font-mono">
-                                    Concept &amp; Logline
+                                <span className="text-[15px] font-semibold text-ink-900">
+                                    Story so far
+                                </span>
+                                <EditButton
+                                    title="Story So Far"
+                                    value={story.story_so_far}
+                                    onSave={() =>
+                                        openEditModal(
+                                            'Story So Far',
+                                            story.story_so_far || '',
+                                            (val) =>
+                                                setStory((prev) => ({
+                                                    ...prev,
+                                                    story_so_far: val
+                                                }))
+                                        )
+                                    }
+                                />
+                            </div>
+                            <CollapsibleProse
+                                className="text-[15px] text-ink-700 leading-[1.75] prose max-w-none py-1 font-serif"
+                                html={parseMarkdown(story.story_so_far)}
+                            />
+                        </div>
+                    )}
+
+                    <div className="-order-1 lg:order-none bg-surface p-5 sm:p-8 rounded-2xl border border-edge shadow-sm space-y-6">
+                        {/* Concept & Logline */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[15px] font-semibold text-ink-900">
+                                    Concept
                                 </span>
                                 <EditButton
                                     title="Concept"
@@ -462,8 +386,8 @@ export function DashboardView({
                         {/* Author's Note */}
                         <div className="pt-4 border-t border-edge-soft space-y-2">
                             <div className="flex justify-between items-center">
-                                <span className="text-xs font-bold text-gold-ink uppercase tracking-wider font-mono">
-                                    Author&apos;s Note &amp; Editorial Direction
+                                <span className="text-[15px] font-semibold text-ink-900">
+                                    Author&apos;s note
                                 </span>
                                 <EditButton
                                     title="Author's Note"
@@ -480,7 +404,10 @@ export function DashboardView({
                             </div>
                             <CollapsibleProse
                                 className="font-serif text-[15.5px] text-ink-800 leading-[1.75] prose max-w-none bg-gold-tint/35 border-l-2 border-gold pl-4 py-2.5 rounded-r-xl"
-                                html={parseMarkdown(story.author_note || "No author's note set. Click edit to add global creative direction.")}
+                                html={parseMarkdown(
+                                    story.author_note ||
+                                        "No author's note set. Click edit to add global creative direction."
+                                )}
                             />
                         </div>
 
@@ -513,46 +440,120 @@ export function DashboardView({
                                 />
                             </div>
                         )}
-
-                        {/* Story So Far */}
-                        {story.story_so_far && (
-                            <div className="pt-4 border-t border-edge-soft space-y-2">
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs font-bold text-ink-500 uppercase tracking-wider font-mono">
-                                        Story So Far (Continuity Synopsis)
-                                    </span>
-                                    <EditButton
-                                        title="Story So Far"
-                                        value={story.story_so_far}
-                                        onSave={() =>
-                                            openEditModal(
-                                                'Story So Far',
-                                                story.story_so_far || '',
-                                                (val) =>
-                                                    setStory((prev) => ({
-                                                        ...prev,
-                                                        story_so_far: val
-                                                    }))
-                                            )
-                                        }
-                                    />
-                                </div>
-                                <CollapsibleProse
-                                    className="text-[15px] text-ink-700 leading-[1.75] prose max-w-none py-1 font-serif"
-                                    html={parseMarkdown(story.story_so_far)}
-                                />
-                            </div>
-                        )}
                     </div>
 
+                    <FoldedSection
+                        title="Writing mode"
+                        summary={story.writing_mode === 'audio_drama' ? 'Audio drama' : 'Prose'}
+                    >
+                        <div
+                            className="grid grid-cols-2 p-1 bg-inset rounded-xl border border-edge gap-1"
+                            role="radiogroup"
+                            aria-label="Writing Mode"
+                        >
+                            <button
+                                type="button"
+                                role="radio"
+                                aria-checked={story.writing_mode !== 'audio_drama'}
+                                onClick={() => {
+                                    if (story.writing_mode === 'novel') return;
+                                    setStory((prev) => {
+                                        const updated = { ...prev, writing_mode: 'novel' };
+                                        if (storyStore?.saveStory && updated.id) {
+                                            storyStore
+                                                .saveStory(
+                                                    updated.id,
+                                                    updated as unknown as Parameters<
+                                                        typeof storyStore.saveStory
+                                                    >[1]
+                                                )
+                                                .catch((err) =>
+                                                    console.warn(
+                                                        'Failed saving writing mode change:',
+                                                        err
+                                                    )
+                                                );
+                                        }
+                                        return updated;
+                                    });
+                                    showToast('Writing mode switched to Novel', 'info');
+                                }}
+                                className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                                    story.writing_mode !== 'audio_drama'
+                                        ? 'bg-surface text-ink-900 shadow-2xs border border-edge-strong'
+                                        : 'text-ink-500 hover:text-ink-800'
+                                }`}
+                            >
+                                <Book
+                                    size={14}
+                                    className={
+                                        story.writing_mode !== 'audio_drama'
+                                            ? 'text-gold-ink'
+                                            : 'text-ink-400'
+                                    }
+                                />
+                                <span>Novel</span>
+                            </button>
+                            <button
+                                type="button"
+                                role="radio"
+                                aria-checked={story.writing_mode === 'audio_drama'}
+                                onClick={() => {
+                                    if (story.writing_mode === 'audio_drama') return;
+                                    setStory((prev) => {
+                                        const updated = {
+                                            ...prev,
+                                            writing_mode: 'audio_drama'
+                                        };
+                                        if (storyStore?.saveStory && updated.id) {
+                                            storyStore
+                                                .saveStory(
+                                                    updated.id,
+                                                    updated as unknown as Parameters<
+                                                        typeof storyStore.saveStory
+                                                    >[1]
+                                                )
+                                                .catch((err) =>
+                                                    console.warn(
+                                                        'Failed saving writing mode change:',
+                                                        err
+                                                    )
+                                                );
+                                        }
+                                        return updated;
+                                    });
+                                    showToast('Writing mode switched to Audio Drama', 'info');
+                                }}
+                                className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                                    story.writing_mode === 'audio_drama'
+                                        ? 'bg-surface text-ink-900 shadow-2xs border border-edge-strong'
+                                        : 'text-ink-500 hover:text-ink-800'
+                                }`}
+                            >
+                                <Headphones
+                                    size={14}
+                                    className={
+                                        story.writing_mode === 'audio_drama'
+                                            ? 'text-gold-ink'
+                                            : 'text-ink-400'
+                                    }
+                                />
+                                <span>Audio Drama</span>
+                            </button>
+                        </div>
+                        <p className="text-xs text-ink-500 italic font-serif">
+                            {story.writing_mode === 'audio_drama'
+                                ? 'Generates multi-voice audio drama-style scripts for audio generation.'
+                                : 'Generates standard narrative prose with rich scene description, narrative pacing, and dialogue tags.'}
+                        </p>
+                    </FoldedSection>
+
                     {/* Macro Story Arc & Thematic Thesis Card (Tier 1.1) */}
-                    <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-edge shadow-sm space-y-5">
-                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                            <div>
-                                <h3 className="text-xs font-bold text-gold-ink uppercase tracking-wider font-mono flex gap-2 items-center">
-                                    <Sparkles size={15} /> Thematic Heart &amp; Story Arc
-                                </h3>
-                            </div>
+                    <FoldedSection
+                        title="Story arc"
+                        summary={story.core_thematic_argument || 'Not developed yet'}
+                    >
+                        <div className="flex flex-col sm:flex-row justify-end sm:items-center gap-3">
                             <button
                                 onClick={() => generateStoryArc()}
                                 disabled={loading}
@@ -589,8 +590,8 @@ export function DashboardView({
                                     <div className="p-5 bg-gold-tint/40 rounded-xl border border-gold-edge space-y-2">
                                         <div className="flex justify-between items-center">
                                             <span className="text-xs font-bold text-gold-ink uppercase tracking-wider font-mono flex items-center gap-1.5">
-                                                <Sparkles size={12} className="text-amber-500" /> Core
-                                                Thematic Argument (Philosophical Thesis)
+                                                <Sparkles size={12} className="text-amber-500" />{' '}
+                                                Core Thematic Argument (Philosophical Thesis)
                                             </span>
                                             <EditButton
                                                 title="Core Thematic Argument"
@@ -744,7 +745,7 @@ export function DashboardView({
                                 )}
                             </div>
                         )}
-                    </div>
+                    </FoldedSection>
 
                     {/* Series Plan card: only for a series, or to start a sequel */}
                     <DashboardSeriesPanel
@@ -782,18 +783,10 @@ export function DashboardView({
                     />
 
                     {/* Genre Architecture & Universe Rules Card (Tier 0.1) */}
-                    <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-edge shadow-sm space-y-5">
-                        <div>
-                            <h3 className="text-xs font-bold text-gold-ink uppercase tracking-wider font-mono flex items-center gap-2">
-                                <Compass size={15} /> Genre Architecture &amp; Universe Rules{' '}
-                                {isInspectorMode ? '(Tier 0.1)' : ''}
-                            </h3>
-                            <p className="text-xs text-ink-500 mt-0.5">
-                                Narrative engine, contradiction synthesis, trope subversion, and
-                                universe rules/constraints.
-                            </p>
-                        </div>
-
+                    <FoldedSection
+                        title={isInspectorMode ? 'Genre (Tier 0.1)' : 'Genre'}
+                        summary={parsedGenre.primaryEngine || undefined}
+                    >
                         <div className="space-y-4">
                             {/* Primary Narrative Engine */}
                             <div className="p-4 sm:p-5 bg-inset rounded-xl border border-edge-strong space-y-2">
@@ -803,7 +796,9 @@ export function DashboardView({
                                     </span>
                                     <EditButton
                                         title="Genre / Narrative Engine"
-                                        value={parsedGenre.primaryEngine || story.style?.genre || ''}
+                                        value={
+                                            parsedGenre.primaryEngine || story.style?.genre || ''
+                                        }
                                         onSave={() =>
                                             openEditModal(
                                                 'Genre / Narrative Engine',
@@ -946,20 +941,13 @@ export function DashboardView({
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </FoldedSection>
 
                     {/* Tone, Atmosphere & Sensory Lens Card (Tier 0.1) */}
-                    <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-edge shadow-sm space-y-5">
-                        <div>
-                            <h3 className="text-xs font-bold text-gold-ink uppercase tracking-wider font-mono flex items-center gap-2">
-                                <Feather size={15} /> Tone, Atmosphere &amp; Sensory Lens{' '}
-                                {isInspectorMode ? '(Tier 0.1)' : ''}
-                            </h3>
-                            <p className="text-xs text-ink-500 mt-0.5">
-                                Authorial triangulation and perceptual sensory filters.
-                            </p>
-                        </div>
-
+                    <FoldedSection
+                        title={isInspectorMode ? 'Tone (Tier 0.1)' : 'Tone'}
+                        summary={parsedTone.authorialTriangulation || undefined}
+                    >
                         <div className="space-y-4">
                             {/* Authorial Triangulation */}
                             <div className="p-4 sm:p-5 bg-inset rounded-xl border border-edge-strong space-y-2">
@@ -1040,21 +1028,13 @@ export function DashboardView({
                                 </div>
                             )}
                         </div>
-                    </div>
+                    </FoldedSection>
 
                     {/* Prose Engineering & Stylistic Mechanics Card (Tier 0.1) */}
-                    <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-edge shadow-sm space-y-5">
-                        <div>
-                            <h3 className="text-xs font-bold text-gold-ink uppercase tracking-wider font-mono flex items-center gap-2">
-                                <Sliders size={15} /> Prose Style &amp; Narrative Voice{' '}
-                                {isInspectorMode ? '(Tier 0.1)' : ''}
-                            </h3>
-                            <p className="text-xs text-ink-500 mt-0.5">
-                                Camera focalizer bias, thematic vocabulary lexicon, syntactic
-                                rhythm, and anti-patterns.
-                            </p>
-                        </div>
-
+                    <FoldedSection
+                        title={isInspectorMode ? 'Prose style (Tier 0.1)' : 'Prose style'}
+                        summary={parsedStyle.focalizerBias || undefined}
+                    >
                         <div className="space-y-4">
                             {/* Focalizer Bias */}
                             {parsedStyle.focalizerBias && (
@@ -1201,7 +1181,8 @@ export function DashboardView({
                             {/* Novel Length Control & Pacing Ranges */}
                             {(() => {
                                 const targetTotalWords = story.target_word_count || 80000;
-                                const bookTypeKey = (story.book_type || 'popular') as keyof typeof LENGTH_CONTROL.BOOK_TYPES;
+                                const bookTypeKey = (story.book_type ||
+                                    'popular') as keyof typeof LENGTH_CONTROL.BOOK_TYPES;
                                 const bookTypeConfig = LENGTH_CONTROL.BOOK_TYPES[bookTypeKey] || {
                                     label: 'Custom',
                                     words: targetTotalWords,
@@ -1217,11 +1198,7 @@ export function DashboardView({
                                         const e2 = story?.prose?.[`${i}-0-${scIdx}`];
                                         const e3 = sc.id ? story?.prose?.[sc.id] : undefined;
                                         const hasF = (
-                                            entry:
-                                                | string
-                                                | { final?: string }
-                                                | null
-                                                | undefined
+                                            entry: string | { final?: string } | null | undefined
                                         ) => Boolean(typeof entry === 'object' && entry?.final);
                                         return !hasF(e1) && !hasF(e2) && !hasF(e3);
                                     });
@@ -1314,16 +1291,13 @@ export function DashboardView({
                                 );
                             })()}
                         </div>
-                    </div>
+                    </FoldedSection>
 
                     {/* Active Narrative Threads Card */}
-                    <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-edge shadow-sm space-y-5">
-                        <div className="flex justify-between items-center">
-                            <h3 className="text-xs font-bold text-gold-ink uppercase tracking-wider font-mono flex items-center gap-2">
-                                <GitBranch size={15} /> Active Narrative Threads (
-                                {story.threads?.length || 0})
-                            </h3>
-                        </div>
+                    <FoldedSection
+                        title="Threads"
+                        summary={(story.threads || []).map((t) => t.name).join(', ') || 'None yet'}
+                    >
                         <div className="space-y-3.5">
                             {(story.threads || []).map((t, i) => (
                                 <div
@@ -1373,16 +1347,19 @@ export function DashboardView({
                                 </div>
                             ))}
                         </div>
-                    </div>
+                    </FoldedSection>
 
                     {/* Central Human Dilemma Banner (Truby Four-Corner Character Web) */}
                     {story.heart_of_the_dilemma && (
-                        <div className="bg-gold-tint/40 p-6 sm:p-7 rounded-2xl border border-gold-edge shadow-sm space-y-2">
-                            <div className="flex justify-between items-center pb-2 border-b border-gold-edge/60">
-                                <h3 className="text-xs font-bold text-gold-ink uppercase tracking-wider font-mono flex items-center gap-2">
-                                    <Compass size={15} /> Central Human Dilemma{' '}
-                                    {isInspectorMode ? '(Four-Corner Web)' : ''}
-                                </h3>
+                        <FoldedSection
+                            title={
+                                isInspectorMode
+                                    ? 'Central dilemma (Four-Corner Web)'
+                                    : 'Central dilemma'
+                            }
+                            summary={story.heart_of_the_dilemma}
+                        >
+                            <div className="flex justify-end items-center pb-2 border-b border-gold-edge/60">
                                 <EditButton
                                     title="Central Human Dilemma"
                                     value={story.heart_of_the_dilemma}
@@ -1402,17 +1379,18 @@ export function DashboardView({
                             <p className="text-sm sm:text-base text-ink-900 font-serif leading-relaxed italic">
                                 &quot;{story.heart_of_the_dilemma}&quot;
                             </p>
-                        </div>
+                        </FoldedSection>
                     )}
 
                     {/* Character Psychological Arcs Card (Tier 1.1) */}
-                    <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-edge shadow-sm space-y-5">
-                        <div className="flex justify-between items-center">
-                            <h3 className="text-xs font-bold text-gold-ink uppercase tracking-wider font-mono flex items-center gap-2">
-                                <Users size={15} /> Character Psychological Arcs{' '}
-                                {isInspectorMode ? '(Tier 1.1)' : ''}
-                            </h3>
-                        </div>
+                    <FoldedSection
+                        title={isInspectorMode ? 'Character arcs (Tier 1.1)' : 'Character arcs'}
+                        summary={
+                            story.character_arcs?.length
+                                ? `${story.character_arcs.length} characters`
+                                : 'Not developed yet'
+                        }
+                    >
                         {!story.character_arcs || story.character_arcs.length === 0 ? (
                             <div className="text-center py-6 px-4 bg-ember-tint border border-dashed border-ember-edge rounded-xl">
                                 <p className="text-xs text-ink-600">
@@ -1670,20 +1648,14 @@ export function DashboardView({
                                 })}
                             </div>
                         )}
-                    </div>
+                    </FoldedSection>
 
                     {/* Continuity Ledger (Canonical Facts) Card */}
-                    <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-edge shadow-sm space-y-5">
-                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                            <div>
-                                <h3 className="text-xs font-bold text-gold-ink uppercase tracking-wider font-mono flex gap-2 items-center">
-                                    <Layers size={15} /> Established Story Facts &amp; Continuity
-                                </h3>
-                                <p className="text-xs text-ink-500 mt-0.5">
-                                    Physical traits, key items, locations, opinions, and promises
-                                    tracked across scenes.
-                                </p>
-                            </div>
+                    <FoldedSection
+                        title="Established facts"
+                        summary={`${story.continuity_ledger?.length || 0} facts`}
+                    >
+                        <div className="flex flex-col sm:flex-row justify-end sm:items-center gap-3">
                             <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
                                 {story.continuity_ledger &&
                                     story.continuity_ledger.some((entry) =>
@@ -1825,8 +1797,7 @@ export function DashboardView({
                             <div className="space-y-3">
                                 {story.continuity_ledger.map((fact, idx) => {
                                     const cat = (fact.category || 'Fact').toLowerCase();
-                                    let badgeClass =
-                                        'bg-mist-200/80 text-ink-700 border-edge-300';
+                                    let badgeClass = 'bg-mist-200/80 text-ink-700 border-edge-300';
                                     if (cat === 'appearance')
                                         badgeClass =
                                             'bg-plum-tint-strong text-plum-800 border-plum-edge';
@@ -1837,8 +1808,7 @@ export function DashboardView({
                                         badgeClass =
                                             'bg-sage-tint-strong text-sage-800 border-sage-edge';
                                     else if (cat === 'opinion')
-                                        badgeClass =
-                                            'bg-blue-100 text-blue-800 border-azure-edge';
+                                        badgeClass = 'bg-blue-100 text-blue-800 border-azure-edge';
                                     else if (cat === 'agreement')
                                         badgeClass =
                                             'bg-iris-tint-strong text-iris-800 border-iris-edge';
@@ -1940,7 +1910,7 @@ export function DashboardView({
                                 })}
                             </div>
                         )}
-                    </div>
+                    </FoldedSection>
                 </div>
             </div>
         </div>

@@ -1,5 +1,6 @@
 export * from './BufferedTextarea';
 export * from './CollapsibleProse';
+export * from './FoldedSection';
 export * from './EditButton';
 export * from './EditorialSubNav';
 export * from './HumanStructuredValue';
