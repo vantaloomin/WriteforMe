@@ -123,8 +123,8 @@ export function DashboardFolioSidebar({
     return (
         <div className="contents lg:block lg:w-[360px] xl:w-[400px] shrink-0 lg:space-y-6 lg:sticky lg:top-24">
             {/* Tactile Book Cover Frame */}
-            <div className="order-last lg:order-none bg-surface p-5 rounded-2xl border border-edge shadow-sm">
-                <div className="book-cover-frame mx-auto max-w-[280px]">
+            <div className="-order-5 lg:order-none bg-surface p-5 rounded-2xl border border-edge shadow-sm">
+                <div className="book-cover-frame mx-auto max-w-[220px] lg:max-w-[280px]">
                     {/* Spine crease & shading overlays */}
                     <div className="book-spine-shadow" />
                     <div className="book-spine-crease" />
@@ -208,11 +208,11 @@ export function DashboardFolioSidebar({
                 />
 
                 {/* Action Controls for Cover */}
-                <div className="flex gap-2 mt-4">
+                <div className="flex justify-center gap-5 mt-3">
                     <button
                         onClick={generateCoverImage}
                         disabled={loadingCover}
-                        className="flex-1 bg-surface hover:bg-lift border border-edge-strong text-ink-800 py-2 px-3 rounded-xl text-xs flex justify-center items-center gap-1.5 transition-all font-semibold shadow-2xs hover:border-gold/50"
+                        className="min-h-[44px] lg:min-h-0 text-ink-500 hover:text-ink-900 px-1 text-xs flex items-center gap-1.5 transition-colors font-semibold disabled:opacity-50"
                     >
                         {loadingCover ? (
                             <>
@@ -221,16 +221,16 @@ export function DashboardFolioSidebar({
                             </>
                         ) : (
                             <>
-                                <Image size={13} className="text-gold-ink" /> Generate AI
+                                <Image size={13} /> Generate cover
                             </>
                         )}
                     </button>
                     <button
                         onClick={() => coverUploadInputRef.current?.click()}
                         disabled={loadingCover}
-                        className="flex-1 bg-surface hover:bg-lift border border-edge-strong text-ink-800 py-2 px-3 rounded-xl text-xs flex justify-center items-center gap-1.5 transition-all font-semibold shadow-2xs"
+                        className="min-h-[44px] lg:min-h-0 text-ink-500 hover:text-ink-900 px-1 text-xs flex items-center gap-1.5 transition-colors font-semibold disabled:opacity-50"
                     >
-                        <Upload size={13} className="text-ink-500" /> Upload
+                        <Upload size={13} /> Upload cover
                     </button>
                 </div>
             </div>
@@ -239,13 +239,9 @@ export function DashboardFolioSidebar({
             <div
                 className={`${allScenesCount > 0 ? '-order-2' : ''} lg:order-none bg-surface p-5 rounded-2xl border border-edge shadow-sm space-y-4`}
             >
-                <div className="flex items-baseline gap-2.5">
-                    <span className="text-4xl leading-none font-bold font-serif text-gold-ink">
-                        {progressPercent}%
-                    </span>
-                    <span className="text-sm text-ink-600">
-                        {draftedScenesCount} of {allScenesCount} scenes written
-                    </span>
+                <div className="text-sm text-ink-600">
+                    <strong className="text-ink-900">{progressPercent}%</strong> written ·{' '}
+                    {draftedScenesCount} of {allScenesCount} scenes
                 </div>
 
                 <div className="w-full bg-mist-100 h-2 rounded-full overflow-hidden">
@@ -268,11 +264,24 @@ export function DashboardFolioSidebar({
                     </span>
                 </div>
 
+                {/* Enter Reading Mode Button */}
+                <button
+                    onClick={() => enterReaderMode()}
+                    className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-btn hover:bg-btn-hover text-btn-ink font-bold text-sm shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+                >
+                    <BookOpen size={14} className="text-btn-accent" />
+                    <span>
+                        {readingProgress.sequenceIndex !== undefined
+                            ? 'Resume reading'
+                            : 'Start reading'}
+                    </span>
+                </button>
+
                 {nextScene && (
                     <div className="pt-4 border-t border-edge-soft space-y-3">
                         <div>
                             <span className="block text-[13px] text-ink-500">Next</span>
-                            <span className="block text-lg leading-snug font-bold font-serif text-ink-900">
+                            <span className="block text-base leading-snug font-bold font-serif text-ink-900">
                                 Scene {nextScene.label}
                                 {nextScene.title ? ` · ${nextScene.title}` : ''}
                             </span>
@@ -284,32 +293,12 @@ export function DashboardFolioSidebar({
                                 setSelectedScene(nextScene.sceneIndex);
                                 setView('writer');
                             }}
-                            className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-btn hover:bg-btn-hover text-btn-ink font-bold text-sm shadow-sm flex items-center justify-center transition-all active:scale-95 cursor-pointer"
+                            className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-surface hover:bg-lift border border-edge-strong text-ink-800 font-bold text-xs shadow-2xs flex items-center justify-center transition-all active:scale-95 cursor-pointer"
                         >
                             Continue writing
                         </button>
                     </div>
                 )}
-
-                {/* Enter Reading Mode Button */}
-                <button
-                    onClick={() => enterReaderMode()}
-                    className={`w-full py-2.5 px-4 rounded-xl font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer ${
-                        nextScene
-                            ? 'bg-surface hover:bg-lift border border-edge-strong text-ink-800'
-                            : 'bg-btn hover:bg-btn-hover text-btn-ink'
-                    }`}
-                >
-                    <BookOpen
-                        size={14}
-                        className={nextScene ? 'text-gold-ink' : 'text-btn-accent'}
-                    />
-                    <span>
-                        {readingProgress.sequenceIndex !== undefined
-                            ? 'Resume Reading'
-                            : 'Start Reading Mode'}
-                    </span>
-                </button>
 
                 {/* 1-Click Autonomous Editorial Harness Action */}
                 <div className="pt-2 border-t border-edge-soft space-y-2">
@@ -496,14 +485,14 @@ export function DashboardFolioSidebar({
                 </div>
 
                 {/* Stage-Level Story Reset Dropdown */}
-                <div className="pt-2 border-t border-edge-soft">
+                <div className="pt-2 border-t border-edge-soft flex justify-start">
                     <StoryResetDropdown
                         story={story}
                         onResetStage={handleResetStoryStage}
                         availableSceneAudioMap={availableSceneAudioMap}
                         disabled={loading}
                         align="left"
-                        fullWidth={true}
+                        fullWidth={false}
                         dropUp={true}
                     />
                 </div>
