@@ -64,7 +64,8 @@ export function LoreProposalsPanel<TStory extends LoreProposalStory, TItem exten
                         Proposed by the model ({waiting.length})
                     </span>
                     <p className="text-xs text-ink-500">
-                        New facts the model picked up while writing. None is part of the story until you approve it.
+                        New facts the model picked up while writing, or wrote for a world you asked it to build. None is part of
+                        the story until you approve it.
                     </p>
                 </div>
                 <div className="flex gap-2">
