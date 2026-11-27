@@ -6,6 +6,7 @@
  * and Canonical Continuity Ledger.
  */
 
+import { ContentDialPanel } from './ContentDialPanel';
 import {
     Book,
     CheckCircle2,
@@ -510,6 +511,8 @@ export function DashboardView({
                                 }}
                             />
                         </div>
+
+                        <ContentDialPanel story={story} setStory={(updater) => setStory(updater)} />
 
                         {/* Status Quo */}
                         {story.status_quo && (
