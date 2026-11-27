@@ -123,8 +123,8 @@ export function DashboardFolioSidebar({
     return (
         <div className="contents lg:block lg:w-[360px] xl:w-[400px] shrink-0 lg:space-y-6 lg:sticky lg:top-24">
             {/* Tactile Book Cover Frame */}
-            <div className="-order-5 lg:order-none bg-surface p-5 rounded-2xl border border-edge shadow-sm">
-                <div className="book-cover-frame mx-auto max-w-[220px] lg:max-w-[280px]">
+            <div className="-order-5 lg:order-none bg-surface p-4 pb-1 sm:p-5 rounded-2xl border border-edge shadow-sm">
+                <div className="book-cover-frame mx-auto max-w-[168px] sm:max-w-[220px] lg:max-w-[280px]">
                     {/* Spine crease & shading overlays */}
                     <div className="book-spine-shadow" />
                     <div className="book-spine-crease" />
