@@ -22,6 +22,8 @@ export interface FeatureOptions {
     summaryCheck: boolean;
     /** Tell the writer which phrases the last few scenes keep reusing, so it stops. */
     phraseHabitWatch: boolean;
+    /** Tell Claude where the repeated start of the scene-writing prompt ends, so it is cached. */
+    promptCacheMarks: boolean;
     /** Where Autopilot pauses by itself: 'never', 'scene', 'sequence' or 'act'. */
     autopilotPauseAt: AutopilotPauseAt;
     /** Thousands of tokens one Autopilot run may use; 0 means no cap. */
@@ -34,6 +36,7 @@ export const DEFAULT_FEATURE_OPTIONS: FeatureOptions = {
     secretLeakCheck: true,
     summaryCheck: true,
     phraseHabitWatch: true,
+    promptCacheMarks: true,
     autopilotPauseAt: 'never',
     autopilotTokenCap: 0,
     autopilotSpendCap: 0
