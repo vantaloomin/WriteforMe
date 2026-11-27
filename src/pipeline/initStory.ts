@@ -110,6 +110,36 @@ interface RelationshipEntry {
     history: Array<{ chapter: string; change: string }>;
 }
 
+/** Saves a freshly built story document and makes it the active story. */
+export async function activateCreatedStory(
+    ctx: PipelineRuntimeContext,
+    newStoryId: string,
+    createdStory: PipelineStory
+): Promise<void> {
+    await storyStore.saveStory(newStoryId, createdStory);
+    await logStore.saveLogs(newStoryId, []);
+
+    const skipRef = ctx.getSkipNextIdbHydrationIdRef?.();
+    if (skipRef) skipRef.current = newStoryId;
+    const initMountRef = ctx.getIsInitialMountRef?.();
+    if (initMountRef) initMountRef.current = false;
+
+    ctx.setSelectedAct?.(null);
+    ctx.setSelectedSequence?.(null);
+    ctx.setSelectedScene?.(null);
+    ctx.setPromptLog?.([]);
+    const logHydratedRef = ctx.getIsLogHydratedRef?.();
+    if (logHydratedRef) logHydratedRef.current = true;
+    ctx.setWorldPrimer(null);
+
+    const snapshotsMap = ctx.getStorySnapshotsByIdMap?.();
+    if (snapshotsMap) snapshotsMap[newStoryId] = createdStory;
+    ctx.setStory(createdStory);
+    const hydratedRef = ctx.getHasHydratedStoryRef?.();
+    if (hydratedRef) hydratedRef.current = true;
+    ctx.setActiveStoryId?.(newStoryId);
+}
+
 /** Creates and persists a new Story document from the current Setup Wizard draft. */
 export async function createStoryEntityFromSetup(
     ctx: PipelineRuntimeContext,
@@ -210,28 +240,7 @@ export async function createStoryEntityFromSetup(
         // Ignore cleanup errors for untouched default placeholder
     }
 
-    await storyStore.saveStory(newStoryId, createdStory);
-    await logStore.saveLogs(newStoryId, []);
-
-    const skipRef = ctx.getSkipNextIdbHydrationIdRef?.();
-    if (skipRef) skipRef.current = newStoryId;
-    const initMountRef = ctx.getIsInitialMountRef?.();
-    if (initMountRef) initMountRef.current = false;
-
-    ctx.setSelectedAct?.(null);
-    ctx.setSelectedSequence?.(null);
-    ctx.setSelectedScene?.(null);
-    ctx.setPromptLog?.([]);
-    const logHydratedRef = ctx.getIsLogHydratedRef?.();
-    if (logHydratedRef) logHydratedRef.current = true;
-    ctx.setWorldPrimer(null);
-
-    const snapshotsMap = ctx.getStorySnapshotsByIdMap?.();
-    if (snapshotsMap) snapshotsMap[newStoryId] = createdStory;
-    ctx.setStory(createdStory);
-    const hydratedRef = ctx.getHasHydratedStoryRef?.();
-    if (hydratedRef) hydratedRef.current = true;
-    ctx.setActiveStoryId?.(newStoryId);
+    await activateCreatedStory(ctx, newStoryId, createdStory);
 
     ctx.clearSetupDraft?.();
 
