@@ -99,11 +99,8 @@ describe('Phase 5H: StudioSidebar, StudioHeader, and remaining modals', () => {
                     loading={false}
                     continuousAutopilot={false}
                     isAudioAutopilotRunning={false}
-                    isAudioAutopilotQueued={false}
                     storyAudioSummary={{ readyCount: 1, totalDrafted: 1 }}
                     refreshLibrary={vi.fn()}
-                    handleAutopilot={vi.fn()}
-                    handleToggleAudioAutopilot={vi.fn()}
                     enterReaderMode={vi.fn()}
                     getSceneProseText={() => 'prose'}
                     getSceneAudioStatus={() => ({ status: 'ready' })}
