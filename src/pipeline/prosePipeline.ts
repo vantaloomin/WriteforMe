@@ -29,6 +29,7 @@ import {
     runContinuityAuditor,
     type ContinuityStoryState
 } from '@/domain/continuity';
+import { isRevealDueThisBook } from '@/domain/series';
 import { formatSlopAuditForPrompt, scanTextForSlop } from '@/domain/slop';
 import {
     actForSequence,
@@ -77,6 +78,7 @@ import {
 } from '@/utils';
 import {
     asArray,
+    asNumber,
     asOptionalRecord,
     asRecord,
     asString,
@@ -2242,6 +2244,10 @@ ${auditLines}
                       const revSeq = Number(revealAnchor.sequence_number || 0);
                       const revScene = Number(revealAnchor.scene_number || 1);
                       if (
+                          isRevealDueThisBook(
+                              sCopy as Parameters<typeof isRevealDueThisBook>[0],
+                              asNumber(asRecord(prev.series).book_number, 0)
+                          ) &&
                           revSeq === currentSeqNumForVault &&
                           (revScene === currentSceneNumForVault ||
                               revScene <= 0 ||
