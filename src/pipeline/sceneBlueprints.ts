@@ -4,6 +4,7 @@
  * Cross-Sequence Boundary Continuity Auditor, and Upstream Place Name Repair.
  */
 
+import { isModelStop } from '@/services/llm';
 import {
     inferNarrativeModeForScene,
     NARRATIVE_MODES,
@@ -1062,6 +1063,8 @@ If ANY spatial contradiction, redundant first-meeting re-introduction, or next-s
         if (isAutopilot) return nextStory;
         return undefined;
     } catch (err) {
+        // A Stop press is not a failure: leave quietly.
+        if (isModelStop(err)) throw err;
         console.error(err);
         ctx.showToast(`Error generating scenes: ${extractErrorMessage(err)}`, 'error');
         if (isAutopilot) throw err;
