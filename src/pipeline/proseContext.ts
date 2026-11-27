@@ -3,6 +3,7 @@
  * 4-tier cache-friendly XML context compiler for the Writing Agent prose & audio drama prompt.
  */
 
+import { CACHE_POINT } from '@/domain/prompt/cacheLayout';
 import { formatModalityHand } from '@/config';
 import {
     getVoiceDescriptionForCharacter,
@@ -483,6 +484,10 @@ ${canonicalInterviews}
             : '';
     })();
 
+    // Everything above this mark is the same for every call that writes this scene (its later
+    // turns and its rewrites); what follows changes with each call. See domain/prompt/cacheLayout.
+    const cachePoint = getFeatureOptions().promptCacheMarks ? CACHE_POINT : '';
+
     const serialSceneCount = Array.isArray(storyToUse.scenes?.[`${seq}`]) ? storyToUse.scenes[`${seq}`].length : s + 1;
 
     const bridgeMandateBlock = (() => {
@@ -543,11 +548,7 @@ ${strictAntiPatternsBlock}
 
 ${buildGenreToneStyleBlocks(storyToUse.style, { includeTechnicalSpecs: true })}${getAuthorNoteXml({ author_note: storyToUse.author_note })}
 
-${staticWorldPrimerBlock}<story_so_far>
-${storyToUse.story_so_far || 'The story is just beginning (no prose has been written yet).'}
-</story_so_far>
-
-${formatLongformSceneDirectives(storyToUse as unknown as Partial<Story>, currentSeqNum, 'prose', storyToUse.sequences?.length || 8, { index: s, count: serialSceneCount })}${canonicalInterviewsBlock}<active_characters_profiles>
+${staticWorldPrimerBlock}${canonicalInterviewsBlock}<active_characters_profiles>
 [EMOTIONAL TEMPERATURE: Write these characters as human beings who feel deeply. Their traits are not clinical diagnoses, but the messy result of lived experiences. Allow for genuine emotional warmth and irrational human complexity.]
 ${sanitizedActiveCast
     .filter(Boolean)
@@ -596,6 +597,11 @@ ${cornerXml ? `${cornerXml}\n` : ''}  <psychological_wound>${flaw}</psychologica
     .join('\n')}
 </active_characters_profiles>
 
+<story_so_far>
+${storyToUse.story_so_far || 'The story is just beginning (no prose has been written yet).'}
+</story_so_far>
+
+${formatLongformSceneDirectives(storyToUse as unknown as Partial<Story>, currentSeqNum, 'prose', storyToUse.sequences?.length || 8, { index: s, count: serialSceneCount })}
 <relationship_friction_matrix>
 ${buildRelationshipFrictionBlock(
     sanitizedActiveCast as unknown as CastMember[],
@@ -646,7 +652,7 @@ ${modalityHandBlock}
 ${activeLensBlock}
 ${upcomingBoundaryBlock}
 ${dialogueTargetBlock}${phraseHabitsBlock}
-${
+${cachePoint}${
     !forceFullRewrite && existingProseText
         ? `
 <current_scene_prior_draft_context>
