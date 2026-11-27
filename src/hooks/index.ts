@@ -35,3 +35,4 @@ export * from './useRelationshipMatrix';
 export * from './useShellViewState';
 export * from './useContinuousAutopilot';
 export * from './useAppUpdates';
+export * from './useDesktopBackends';

@@ -8,6 +8,7 @@
 
 import { ContentDialPanel } from './ContentDialPanel';
 import {
+    CollapsibleProse,
     Book,
     CheckCircle2,
     Compass,
@@ -323,10 +324,8 @@ export function DashboardView({
                     {/* Core Story Blueprint Card */}
                     <div className="bg-surface p-6 sm:p-8 rounded-2xl border border-edge shadow-sm space-y-6">
                         <div>
-                            <div className="text-xs font-bold text-gold-ink uppercase tracking-wider font-mono mb-1.5">
-                                Novel Title
-                            </div>
                             <input
+                                aria-label="Story title"
                                 className="w-full bg-transparent border-b border-transparent hover:border-edge-strong focus:border-gold outline-none font-bold text-2xl sm:text-3xl font-serif text-ink-900 transition-colors pb-1"
                                 value={story.title || ''}
                                 onChange={(e) =>
@@ -337,23 +336,6 @@ export function DashboardView({
                         </div>
 
                         <div className="pt-2 border-t border-edge-soft space-y-2">
-                            <div className="flex justify-between items-center">
-                                <div className="flex items-center gap-1.5">
-                                    {story.writing_mode === 'audio_drama' ? (
-                                        <Headphones size={13} className="text-gold-ink" />
-                                    ) : (
-                                        <Book size={13} className="text-gold-ink" />
-                                    )}
-                                    <span className="text-xs font-bold text-ink-500 uppercase tracking-wider font-mono">
-                                        Writing Mode
-                                    </span>
-                                </div>
-                                <span
-                                    className={`text-xs font-bold font-mono uppercase px-2.5 py-0.5 rounded-full ${story.writing_mode === 'audio_drama' ? 'bg-gold-tint text-gold-ink border border-gold-edge' : 'bg-mist-100 text-ink-600'}`}
-                                >
-                                    {story.writing_mode === 'audio_drama' ? 'Audio Drama' : 'Novel'}
-                                </span>
-                            </div>
                             <div
                                 className="grid grid-cols-2 p-1 bg-inset rounded-xl border border-edge gap-1"
                                 role="radiogroup"
@@ -472,13 +454,9 @@ export function DashboardView({
                                     }
                                 />
                             </div>
-                            <div
+                            <CollapsibleProse
                                 className="font-serif text-[16.5px] text-ink-800 leading-[1.75] prose max-w-none py-1"
-                                dangerouslySetInnerHTML={{
-                                    __html: parseMarkdown(
-                                        story.concept || 'No concept generated yet.'
-                                    )
-                                }}
+                                html={parseMarkdown(story.concept || 'No concept generated yet.')}
                             />
                         </div>
 
@@ -501,14 +479,9 @@ export function DashboardView({
                                     }
                                 />
                             </div>
-                            <div
+                            <CollapsibleProse
                                 className="font-serif text-[15.5px] text-ink-800 leading-[1.75] prose max-w-none bg-gold-tint/35 border-l-2 border-gold pl-4 py-2.5 rounded-r-xl"
-                                dangerouslySetInnerHTML={{
-                                    __html: parseMarkdown(
-                                        story.author_note ||
-                                            "No author's note set. Click edit to add global creative direction."
-                                    )
-                                }}
+                                html={parseMarkdown(story.author_note || "No author's note set. Click edit to add global creative direction.")}
                             />
                         </div>
 
@@ -537,11 +510,9 @@ export function DashboardView({
                                         }
                                     />
                                 </div>
-                                <div
+                                <CollapsibleProse
                                     className="text-[15px] text-ink-700 leading-[1.75] prose max-w-none py-1 font-serif"
-                                    dangerouslySetInnerHTML={{
-                                        __html: parseMarkdown(story.status_quo)
-                                    }}
+                                    html={parseMarkdown(story.status_quo)}
                                 />
                             </div>
                         )}
@@ -569,11 +540,9 @@ export function DashboardView({
                                         }
                                     />
                                 </div>
-                                <div
+                                <CollapsibleProse
                                     className="text-[15px] text-ink-700 leading-[1.75] prose max-w-none py-1 font-serif"
-                                    dangerouslySetInnerHTML={{
-                                        __html: parseMarkdown(story.story_so_far)
-                                    }}
+                                    html={parseMarkdown(story.story_so_far)}
                                 />
                             </div>
                         )}

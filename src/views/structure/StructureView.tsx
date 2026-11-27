@@ -5,6 +5,7 @@
  */
 
 import type React from 'react';
+import { VIEW_LABELS } from '@/config';
 import {
     ArrowLeft,
     BookOpen,
@@ -250,7 +251,7 @@ export function StructureView({
                 <div className="bg-surface p-6 sm:p-7 rounded-2xl border border-edge shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <h2 className="text-2xl font-bold font-serif text-ink-900 flex items-center gap-2.5 tracking-tight">
-                            <Layers className="text-gold-ink" size={22} /> Acts and Sequences
+                            <Layers className="text-gold-ink" size={22} /> {VIEW_LABELS.structure}
                         </h2>
                     </div>
                     <div className="flex flex-wrap items-center gap-2.5">
@@ -398,11 +399,6 @@ export function StructureView({
                                 <div className="p-6 sm:p-7 border-b border-edge bg-inset">
                                     <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
                                         <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between gap-2 mb-2">
-                                                <span className="text-xs font-mono font-bold text-gold-ink uppercase tracking-wider bg-gold-tint border border-gold-edge px-2.5 py-0.5 rounded-full">
-                                                    Act {actNum} Architecture
-                                                </span>
-                                            </div>
                                             <h3 className="text-2xl font-bold font-serif text-ink-900 flex items-center gap-2 text-wrap break-words">
                                                 {act.title}
                                                 <EditButton

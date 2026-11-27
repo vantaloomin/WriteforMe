@@ -1,9 +1,10 @@
 /**
  * @module views/inspector/InspectorView
- * Story Memory Search (RAG Inspector) view displaying query testing, active World Primer, and match scores.
+ * Memory Search (RAG Inspector) view displaying query testing, active World Primer, and match scores.
  */
 
 import { Book, EditorialSubNav, Loader2, Search, type EditorialSubNavProps } from '@/components';
+import { VIEW_LABELS } from '@/config';
 
 export interface RagTestResultItem {
     score: number;
@@ -54,7 +55,7 @@ export function InspectorView({
                 selectedScene={selectedScene}
             />
             <h2 className="text-2xl sm:text-3xl font-serif font-bold text-ink-900 mb-6 flex items-center gap-2.5">
-                <Search className="text-gold-ink" /> Story Memory Search{' '}
+                <Search className="text-gold-ink" /> {VIEW_LABELS.inspector}{' '}
                 {isInspectorMode ? '(RAG Inspector)' : ''}
             </h2>
 
@@ -65,7 +66,7 @@ export function InspectorView({
                 </label>
                 <div className="flex gap-2">
                     <input
-                        className="flex-1 bg-inset border border-edge-strong rounded-xl px-4 py-2 text-xs text-ink-800 focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none transition-colors"
+                        className="flex-1 min-w-0 bg-inset border border-edge-strong rounded-xl px-4 py-2 text-xs text-ink-800 focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none transition-colors"
                         placeholder="e.g., 'What acts of magic are illegal?'"
                         value={ragTestQuery}
                         onChange={(e) => setRagTestQuery(e.target.value)}
@@ -74,7 +75,7 @@ export function InspectorView({
                     <button
                         onClick={handleRagTest}
                         disabled={ragTestLoading}
-                        className="bg-btn hover:bg-btn-hover text-btn-ink px-6 py-2 rounded-xl font-bold text-xs shadow-sm transition-all disabled:opacity-50 flex items-center gap-2"
+                        className="shrink-0 bg-btn hover:bg-btn-hover text-btn-ink px-6 py-2 rounded-xl font-bold text-xs shadow-sm transition-all disabled:opacity-50 flex items-center gap-2"
                     >
                         {ragTestLoading ? <Loader2 className="animate-spin" size={14} /> : 'Search'}
                     </button>
