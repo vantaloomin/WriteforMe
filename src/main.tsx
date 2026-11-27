@@ -6,11 +6,19 @@ import './styles/library.css';
 import './styles/reader.css';
 import './styles/components.css';
 import { STORAGE_KEYS } from '@/config';
+import { applyPromptOverrides, parsePromptOverrides } from '@/prompts/overrides';
 import { installDefaultAudioStageLoggers } from '@/services/audio';
 import { ensureWaitingWorkerActivates } from '@/services/updates/swTakeover';
 import './windowApi';
 
 installDefaultAudioStageLoggers();
+
+// Prompts the user reworded in Settings replace the shipped wording before anything runs.
+try {
+    applyPromptOverrides(parsePromptOverrides(localStorage.getItem(STORAGE_KEYS.promptOverridesV1)));
+} catch {
+    // Storage is unavailable: the shipped prompts stay in use.
+}
 import './App';
 
 // Strip the cache-busting query parameter added by performHardReloadUpdate().
