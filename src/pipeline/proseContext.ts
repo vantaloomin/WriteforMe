@@ -3,6 +3,7 @@
  * 4-tier cache-friendly XML context compiler for the Writing Agent prose & audio drama prompt.
  */
 
+import { normalizeCastBoard, sideLine, sideOfMember } from '@/domain/cast';
 import { CACHE_POINT } from '@/domain/prompt/cacheLayout';
 import { formatModalityHand } from '@/config';
 import {
@@ -488,6 +489,9 @@ ${canonicalInterviews}
     // turns and its rewrites); what follows changes with each call. See domain/prompt/cacheLayout.
     const cachePoint = getFeatureOptions().promptCacheMarks ? CACHE_POINT : '';
 
+    // The author's cast board, when the story has one: which side each character stands with.
+    const castBoard = normalizeCastBoard(storyToUse.cast_board);
+
     const serialSceneCount = Array.isArray(storyToUse.scenes?.[`${seq}`]) ? storyToUse.scenes[`${seq}`].length : s + 1;
 
     const bridgeMandateBlock = (() => {
@@ -586,10 +590,11 @@ ${sanitizedActiveCast
         ]
             .filter(Boolean)
             .join('\n');
+        const stands = sideLine(sideOfMember(castBoard, ch));
         return `<character_profile>
   <name>${ch.name || 'Character'}</name>
   <role>${ch.role || 'Character'}</role>
-${cornerXml ? `${cornerXml}\n` : ''}  <psychological_wound>${flaw}</psychological_wound>
+${stands ? `  <stands_with>${stands}</stands_with>\n` : ''}${cornerXml ? `${cornerXml}\n` : ''}  <psychological_wound>${flaw}</psychological_wound>
   <core_yearning>${desire}</core_yearning>
   <vocal_cadence>${cadence}</vocal_cadence>
 </character_profile>`;
