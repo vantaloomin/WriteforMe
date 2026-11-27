@@ -43,6 +43,7 @@ import { storyStore } from '@/services/storage';
 import { parseMarkdown } from '@/utils';
 import { DashboardEpistemicPanel } from './DashboardEpistemicPanel';
 import { DashboardFolioSidebar } from './DashboardFolioSidebar';
+import { DashboardSerialPanel } from './DashboardSerialPanel';
 import { DashboardSeriesPanel } from './DashboardSeriesPanel';
 import type { DashboardViewProps } from './types';
 
@@ -786,6 +787,9 @@ export function DashboardView({
                         openFormModal={openFormModal}
                         requestConfirm={requestConfirm}
                     />
+
+                    {/* Serial card: only for a serial */}
+                    <DashboardSerialPanel story={story} />
 
                     {/* Secret Vault & Epistemic State Machine (GESM) Card */}
                     <DashboardEpistemicPanel

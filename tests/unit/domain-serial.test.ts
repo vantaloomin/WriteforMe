@@ -44,8 +44,8 @@ function thread(id: string, scope: ThreadScope, owners: string[], extra: Partial
         weight: 2,
         opened_episode: 1,
         last_touched_episode: 1,
-        touches: 1,
-        beats: [],
+        moves: 1,
+        touches: [],
         ...extra
     };
 }
@@ -75,7 +75,7 @@ function seed(cast: Partial<CastPolicy> = {}): SerialState {
         policy: {
             threads: DEFAULT_THREAD_POLICY,
             cast: { ...DEFAULT_CAST_POLICY, maxActivePerArc: 5, ...cast },
-            scenesPerEpisode: 2,
+            episodesPerSequence: 1,
             interludeAfterArcs: 2
         },
         threads,
@@ -186,7 +186,7 @@ describe('domain/serial: scheduleEpisode', () => {
 
         const r = run();
         for (const t of r.state.threads.filter((x) => x.scope === 'side' && x.status === 'resolved')) {
-            expect(t.touches, t.id).toBeGreaterThanOrEqual(DEFAULT_THREAD_POLICY.minTouchesBeforeClose);
+            expect(t.moves, t.id).toBeGreaterThanOrEqual(DEFAULT_THREAD_POLICY.minTouchesBeforeClose);
         }
     });
 
@@ -232,7 +232,7 @@ describe('domain/serial: scheduleEpisode', () => {
         expect(interlude.hook).toBe('quiet');
         expect(interlude.keep_warm.length).toBe(1);
         const checkedIn = r.state.threads.find((t) => t.id === interlude.keep_warm[0])!;
-        expect(checkedIn.beats.some((b) => b.episode === 17)).toBe(true);
+        expect((checkedIn.touches ?? []).some((x) => x.scene === 'ep17')).toBe(true);
     });
 
     it('varies how main episodes end', () => {
@@ -246,7 +246,7 @@ describe('domain/serial: scheduleEpisode', () => {
 
     it('honours the plan a user sets on a thread', () => {
         const s = seed();
-        const deferred: SerialState = { ...s, threads: s.threads.map((t) => (t.id === 'S3' ? { ...t, plan: 'defer' as const } : t)) };
+        const deferred: SerialState = { ...s, threads: s.threads.map((t) => (t.id === 'S3' ? { ...t, intent: 'defer' as const } : t)) };
         const plan = scheduleEpisode(deferred, 'main', ARCS[0]);
         expect([...plan.advance, ...plan.close]).not.toContain('S3');
 
@@ -255,7 +255,7 @@ describe('domain/serial: scheduleEpisode', () => {
             ...s,
             next_episode: 6,
             threads: s.threads.map((t) =>
-                t.id === 'S4' ? { ...t, plan: 'resolve' as const, touches: 3, target_close_episode: 30, last_touched_episode: 5 } : t.id === 'S3' ? { ...t, status: 'resolved' as const, closed_episode: 5 } : t
+                t.id === 'S4' ? { ...t, intent: 'pay_off' as const, source: 'plan' as const, moves: 3, target_close_episode: 30, last_touched_episode: 5 } : t.id === 'S3' ? { ...t, status: 'resolved' as const, closed_episode: 5 } : t
             )
         };
         expect(scheduleEpisode(mature, 'main', ARCS[0]).close).toContain('S4');
@@ -286,7 +286,7 @@ describe('domain/serial: scheduleAhead', () => {
 });
 
 describe('domain/serial: applying an episode', () => {
-    it('records beats, touches and closes, and keeps only the last six beats', () => {
+    it('records touches, moves and closes', () => {
         let s = seed();
         for (let ep = 2; ep <= 9; ep++) {
             s = applyEpisodeResult(
@@ -296,8 +296,8 @@ describe('domain/serial: applying an episode', () => {
             );
         }
         const t = s.threads.find((x) => x.id === 'S3')!;
-        expect(t.touches).toBe(9);
-        expect(t.beats.map((b) => b.episode)).toEqual([4, 5, 6, 7, 8, 9]);
+        expect(t.moves).toBe(9);
+        expect((t.touches ?? []).map((x) => x.scene)).toEqual(['ep2', 'ep3', 'ep4', 'ep5', 'ep6', 'ep7', 'ep8', 'ep9']);
         expect(t.last_note).toBe('Ep 9: beat 9');
         const tobin = s.roster.find((r) => r.name === 'Tobin')!;
         expect(tobin.appearances).toBe(8);
@@ -312,7 +312,7 @@ describe('domain/serial: applying an episode', () => {
         s = applyEpisodeResult(s, { episode: 3, characters_present: [], thread_updates: [{ id: 'S4', change: 'kept_warm', note: 'a letter from Quill' }], opened: [] }, { arc_number: 1, kind: 'interlude', scene_keys: [] });
         const t = s.threads.find((x) => x.id === 'S4')!;
         expect(t.parked).toEqual({ episode: 2, note: 'Quill rides north' });
-        expect(t.touches).toBe(1);
+        expect(t.moves).toBe(1);
         expect(isOpen(t)).toBe(true);
         expect(buildPreviously(s, ['S4'], 7)).toEqual(['S4: a letter from Quill']);
     });
@@ -320,7 +320,7 @@ describe('domain/serial: applying an episode', () => {
     it('gives new threads fresh ids and links them to their owners', () => {
         const s = openThreads(seed(), 4, [{ title: 'debt', description: '', scope: 'side', owners: ['Ilse', 'Tobin'], weight: 2, target_in: 6, spawned_from: 'S3' }]);
         const added = s.threads[s.threads.length - 1];
-        expect(added).toMatchObject({ id: 'S5', status: 'open', opened_episode: 4, target_close_episode: 10, touches: 1, spawned_from: 'S3' });
+        expect(added).toMatchObject({ id: 'S5', status: 'open', opened_episode: 4, target_close_episode: 10, moves: 1, spawned_from: 'S3' });
         expect(s.next_thread_id).toBe(6);
         expect(s.roster.find((r) => r.name === 'Ilse')!.thread_ids).toContain('S5');
         expect(s.roster.find((r) => r.name === 'Tobin')!.thread_ids).toContain('S5');

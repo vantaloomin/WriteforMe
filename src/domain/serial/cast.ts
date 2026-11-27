@@ -3,7 +3,7 @@
  * Cast rotation: who is due on the page, who owns no thread, and who is seated for the next arc.
  */
 
-import { isOpen } from './threads';
+import { isHeld, isOpen } from './threads';
 import type { ArcCastPlan, CastPolicy, RosterEntry, SerialState } from './types';
 
 export const isAnchor = (r: RosterEntry, c: CastPolicy) => c.rotation === 'anchored' && r.anchored === true;
@@ -61,7 +61,7 @@ export function planArcCast(state: SerialState, mainOwners: string[]): ArcCastPl
     // Thread-led: how long has this character's most neglected open thread (side or main) waited?
     const absence = (r: RosterEntry) => ep - r.last_on_page_episode;
     const oldestIdle = (r: RosterEntry) => {
-        const own = state.threads.filter((t) => openIds.has(t.id) && t.scope !== 'series' && t.plan !== 'defer' && t.owners.includes(r.name));
+        const own = state.threads.filter((t) => openIds.has(t.id) && t.scope !== 'series' && !isHeld(t) && t.owners.includes(r.name));
         // A character with no thread is owed one: their time away counts as that thread's age.
         if (own.length === 0) return c.everyoneOwnsThread && c.threadRequiredTiers.includes(r.tier) ? absence(r) : 0;
         // A parked thread waits from the day it was parked; an interlude check-in does not reset that.

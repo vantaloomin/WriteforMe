@@ -2,7 +2,6 @@
  * @module domain/serial/promptBlock
  * The `<serial_context>` prompt block. It returns an empty string unless both a serial and an episode
  * plan are given, so every prompt for a standalone story or a plain series book is unchanged.
- * No prompt builder calls it yet.
  */
 
 import type { EpisodePlan, SerialState } from './types';
@@ -14,7 +13,11 @@ export function formatSerialContext(serial: SerialState | undefined, plan: Episo
         const t = byId.get(id);
         return t ? `<thread id="${t.id}" scope="${t.scope}" owners="${t.owners.join(', ')}">${t.title}: ${t.last_note ?? t.description}</thread>` : '';
     };
-    const block = (tag: string, ids: string[]) => (ids.length ? `<${tag}>\n${ids.map(line).join('\n')}\n</${tag}>\n` : '');
+    // A look-ahead plan may name a thread that does not exist yet (one it expects an earlier episode to open).
+    const block = (tag: string, ids: string[]) => {
+        const lines = ids.map(line).filter(Boolean);
+        return lines.length ? `<${tag}>\n${lines.join('\n')}\n</${tag}>\n` : '';
+    };
     const time = serial.arc_time;
     return `<serial_context arc="${serial.arc_number}" episode="${plan.episode}" kind="${plan.kind}" phase="${plan.phase}" time_mode="${time.mode}" story_time="${time.start.label ?? `day ${time.start.day}`}">
 ${block('advance', plan.advance)}${block('close', plan.close)}${block('park', plan.park)}${block('keep_warm', plan.keep_warm)}${plan.open

@@ -6,13 +6,15 @@
 import type { Episode, EpisodeResult, NewThread, SerialState, SerialThread } from './types';
 
 export const isOpen = (t: SerialThread) => t.status === 'open' || t.status === 'advanced';
+/** The arc plan says to leave this thread alone for now (series intent `rest` or `defer`). */
+export const isHeld = (t: SerialThread) => t.intent === 'defer' || t.intent === 'rest';
 /** Names of the characters who may appear in a main episode right now. */
 export const onStageNames = (state: SerialState, episode: number) =>
     new Set(state.roster.filter((r) => r.status === 'active' && (r.rest_until_episode ?? 0) <= episode).map((r) => r.name));
 
 /** Live = the scheduler may use it now. Parked, user-deferred and ownerless-off-stage threads are not live. */
 export function isLive(t: SerialThread, onStage: Set<string>): boolean {
-    if (!isOpen(t) || t.parked || t.plan === 'defer') return false;
+    if (!isOpen(t) || t.parked || isHeld(t)) return false;
     return t.scope === 'series' || t.owners.length === 0 || t.owners.some((o) => onStage.has(o));
 }
 
@@ -22,15 +24,15 @@ export function applyEpisodeResult(state: SerialState, r: EpisodeResult, episode
     const threads: SerialThread[] = state.threads.map((t) => {
         const u = byId.get(t.id);
         if (!u) return t;
-        const beats = [...t.beats, { episode: r.episode, note: u.note }].slice(-6);
-        const base = { ...t, beats, last_touched_episode: r.episode, last_note: `Ep ${r.episode}: ${u.note}` };
+        const touches = [...(t.touches ?? []), { book: state.arc_number, scene: `ep${r.episode}`, note: u.note }];
+        const base = { ...t, touches, last_touched_episode: r.episode, last_note: `Ep ${r.episode}: ${u.note}` };
         if (u.change === 'kept_warm') return base; // reminds the reader; does not move or un-park the thread
         if (u.change === 'parked') return { ...base, parked: { episode: r.episode, note: u.note } };
         const resolved = u.change === 'resolved';
         return {
             ...base,
             status: resolved ? 'resolved' : 'advanced',
-            touches: t.touches + 1,
+            moves: t.moves + 1,
             closed_episode: resolved ? r.episode : t.closed_episode
         };
     });
@@ -70,8 +72,9 @@ export function openThreads(state: SerialState, episode: number, opened: NewThre
         opened_episode: episode,
         last_touched_episode: episode,
         target_close_episode: o.target_in !== undefined ? episode + o.target_in : undefined,
-        touches: 1, // the episode that opens a thread is its first beat
-        beats: [],
+        moves: 1, // the episode that opens a thread is its first beat
+        touches: [],
+        source: 'model',
         spawned_from: o.spawned_from
     }));
     const roster = state.roster.map((e) => ({

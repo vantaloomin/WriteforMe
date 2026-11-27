@@ -39,7 +39,7 @@ function canClose(t: SerialThread, all: SerialThread[], episode: number, policy:
     const age = episode - t.opened_episode;
     if (age < (t.min_episodes_open ?? policy.minEpisodesOpen)) return false;
     // A payoff needs build-up. Age alone let a thread close that had been opened and then ignored.
-    if (t.scope === 'side' && t.touches < policy.minTouchesBeforeClose) return false;
+    if (t.scope === 'side' && t.moves < policy.minTouchesBeforeClose) return false;
     // A thread back from being parked is picked up on the page before it is paid off.
     if (t.resumed_episode !== undefined && t.last_touched_episode < t.resumed_episode) return false;
     return (t.depends_on ?? []).every((id) => all.find((o) => o.id === id)?.status === 'resolved');
@@ -56,12 +56,12 @@ function pickHook(state: SerialState, kind: EpisodeKind, phase: ArcPhase, closin
     return options.find((h) => !recent.includes(h)) ?? options[0];
 }
 
-/** No LLM needed. The last recorded beat of each thread that returns after a gap. */
+/** No LLM needed. The last recorded touch of each thread that returns after a gap. */
 export function buildPreviously(state: SerialState, threadIds: string[], episode: number, gap = 3): string[] {
     return threadIds
         .map((id) => state.threads.find((t) => t.id === id))
-        .filter((t): t is SerialThread => !!t && t.beats.length > 0 && episode - t.last_touched_episode >= gap)
-        .map((t) => `${t.title}: ${t.beats[t.beats.length - 1].note}`);
+        .filter((t): t is SerialThread => !!t && (t.touches?.length ?? 0) > 0 && episode - t.last_touched_episode >= gap)
+        .map((t) => `${t.title}: ${(t.touches ?? [])[(t.touches?.length ?? 1) - 1].note}`);
 }
 
 /**
@@ -107,7 +107,7 @@ export function scheduleEpisode(state: SerialState, kind: EpisodeKind, arc: ArcW
         if (close.length >= p.maxClosesPerEpisode + (close.includes(main?.id ?? '') ? 1 : 0)) break;
         const pastDeadline = t.target_close_episode !== undefined && episode >= t.target_close_episode;
         const spacedOut = episode - lastSideClose >= p.minGapBetweenSideCloses;
-        const promised = ending && t.plan === 'resolve'; // the user said: this one ends in this arc
+        const promised = ending && t.intent === 'pay_off' && t.source !== 'model'; // the plan or the user said: this one ends in this arc
         if (departing(t) || promised || (pastDeadline && spacedOut) || sideDue) close.push(t.id);
         else if (pastDeadline) warnings.push(`${t.id} is past its target close; held back to space out payoffs`);
     }
