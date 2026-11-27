@@ -18,6 +18,7 @@ import {
     buildKoboldSamplerSettings,
     callGemini,
     callKoboldCPP,
+    callAnthropic,
     callNanoGPT,
     callOpenRouter,
     getEffectiveModelConfig,
@@ -91,6 +92,7 @@ export interface AiDispatchSettings {
     apiKey?: string;
     openRouterKey?: string;
     nanoGptKey?: string;
+    anthropicKey?: string;
     koboldUrl?: string;
     codexUrl?: string;
     claudeUrl?: string;
@@ -263,6 +265,8 @@ export async function dispatchAI(
                 ? `${CLOUD_API_URLS.geminiModels}/${currentModelToUse}:generateContent`
                 : targetProvider === 'nanogpt'
                   ? CLOUD_API_URLS.nanoGptChat
+                  : targetProvider === 'anthropic'
+                    ? CLOUD_API_URLS.anthropicMessages
                   : targetProvider === 'openrouter'
                     ? CLOUD_API_URLS.openRouterChat
                     : isCliBridgeProvider(targetProvider)
@@ -423,6 +427,15 @@ export async function dispatchAI(
             } else if (targetProvider === 'nanogpt') {
                 response = await callNanoGPT(
                     settings.nanoGptKey || '',
+                    currentModelToUse,
+                    prompt,
+                    finalSystemPrompt,
+                    isJson,
+                    options
+                );
+            } else if (targetProvider === 'anthropic') {
+                response = await callAnthropic(
+                    settings.anthropicKey || '',
                     currentModelToUse,
                     prompt,
                     finalSystemPrompt,
