@@ -20,6 +20,7 @@ import { CLI_BRIDGE_DEFAULT_URLS, isCliBridgeProvider } from '@/types';
 import { SettingsLocalEmbedding } from './SettingsLocalEmbedding';
 import type { SettingsModelsTabProps } from './types';
 import { ComfyConnection } from './ComfyConnection';
+import { OpenAiImageModel } from './OpenAiImageModel';
 
 function readKoboldGlobalModel(): string | undefined {
     return getKoboldLoadedModelName() || undefined;
@@ -1162,12 +1163,15 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                                             openRouterImageModelsList[0]?.id ||
                                                 DEFAULT_IMAGE_MODELS.openrouter
                                         );
+                                    } else if (prov === 'openai') {
+                                        setImageModel(DEFAULT_IMAGE_MODELS.openai);
                                     }
                                 }}
                                 className="w-full bg-inset border border-edge-strong rounded-xl px-3.5 py-2 text-xs text-ink-800 focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none appearance-none transition-colors cursor-pointer"
                             >
                                 <option value="gemini">Gemini (Nano Banana / Native Image)</option>
                                 <option value="openrouter">OpenRouter (SDXL/Flux/etc.)</option>
+                                <option value="openai">OpenAI (GPT Image)</option>
                                 <option value="comfyui">ComfyUI (local, Krea 2)</option>
                             </select>
                             <ChevronDown
@@ -1241,6 +1245,8 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                                         />
                                     )}
                                 </div>
+                            ) : imageProvider === 'openai' ? (
+                                <OpenAiImageModel imageModel={imageModel} setImageModel={setImageModel} />
                             ) : (
                                 <div className="space-y-2">
                                     <div className="relative">
@@ -1319,14 +1325,18 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                 {imageProvider !== 'comfyui' && (
                     <div>
                         <label className="block text-xs font-bold text-ink-700 mb-1 font-mono">
-                            Dedicated Image API Key (Optional)
+                            {imageProvider === 'openai' ? 'OpenAI API Key' : 'Dedicated Image API Key (Optional)'}
                         </label>
                         <input
                             type="password"
                             value={imageApiKey}
                             onChange={(e) => setImageApiKey(e.target.value)}
                             className="w-full bg-inset border border-edge-strong rounded-xl px-3.5 py-2 text-xs text-ink-800 focus:border-gold focus:ring-1 focus:ring-gold/30 outline-none transition-colors"
-                            placeholder="If blank, uses text provider key (Gemini/OpenRouter)"
+                            placeholder={
+                                imageProvider === 'openai'
+                                    ? 'sk-...'
+                                    : 'If blank, uses text provider key (Gemini/OpenRouter)'
+                            }
                         />
                     </div>
                 )}
