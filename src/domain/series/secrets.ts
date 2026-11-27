@@ -326,6 +326,7 @@ export function carrySecretsToSequel(source: Partial<Story>): CarriedSecrets {
         };
     });
 
+    const book = source.series?.book_number || 1;
     const vault: VaultSecret[] = [];
     const revealedFacts: CarriedSecrets['revealedFacts'] = [];
     ((Array.isArray(source.secret_vault) ? source.secret_vault : []) as VaultSecret[]).forEach((v) => {
@@ -345,7 +346,8 @@ export function carrySecretsToSequel(source: Partial<Story>): CarriedSecrets {
                 known_by_characters: knowers,
                 status: 'dormant',
                 clue_schedule: [],
-                reveal_anchor: { act_number: 3, sequence_number: 7, scene_hint: 'Climax confrontation' }
+                reveal_anchor: { act_number: 3, sequence_number: 7, scene_hint: 'Climax confrontation' },
+                carried_from_book: book
             });
             return;
         }
@@ -362,7 +364,8 @@ export function carrySecretsToSequel(source: Partial<Story>): CarriedSecrets {
                 reader_status: 'aware',
                 status: 'dormant',
                 clue_schedule: [],
-                reveal_anchor: { act_number: 3, sequence_number: 7, scene_hint: 'Confrontation' }
+                reveal_anchor: { act_number: 3, sequence_number: 7, scene_hint: 'Confrontation' },
+                carried_from_book: book
             });
         }
     });
@@ -381,4 +384,25 @@ export function validateSecretPlan(secrets: SeriesSecret[], currentBook: number)
         });
         return { ...sec, layers };
     });
+}
+
+/**
+ * The Story Arc step replaces the vault with the secrets it designed for this book. This puts
+ * back the entries that belong to the series: layers of series secrets and secrets carried
+ * over from the previous book.
+ */
+export function keepSeriesVaultEntries(previousVault: unknown, nextVault: unknown): VaultSecret[] {
+    const next = Array.isArray(nextVault) ? [...(nextVault as VaultSecret[])] : [];
+    const prev = Array.isArray(previousVault) ? (previousVault as VaultSecret[]) : [];
+    prev.forEach((v) => {
+        if (!v || typeof v !== 'object') return;
+        if (!v.parent_secret_id && v.carried_from_book === undefined) return;
+        const taken = next.some((n) => n && (n.id === v.id || clean(n.title).toLowerCase() === clean(v.title).toLowerCase()));
+        if (!taken) next.push(v);
+        else if (!next.some((n) => n && n.id === v.id && clean(n.title).toLowerCase() === clean(v.title).toLowerCase())) {
+            // Same id, different secret: give the series entry a free id rather than lose it.
+            next.push({ ...v, id: `${String(v.id)}_series` });
+        }
+    });
+    return next;
 }

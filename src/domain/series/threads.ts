@@ -326,3 +326,18 @@ export function formatThreadLedgerForPrompt(threads: OpenThread[] | undefined, d
         })
         .join('\n');
 }
+
+/**
+ * Links series threads to the per-book threads that carry them. The Story Arc step is asked to
+ * name the series thread id in a book thread's description; anything it leaves unnamed stays unbound.
+ */
+export function bindSeriesThreads(threads: OpenThread[], bookThreads: unknown): OpenThread[] {
+    const list = Array.isArray(bookThreads) ? (bookThreads as Array<Record<string, unknown>>) : [];
+    return threads.map((t) => {
+        const carrier = list.find((bt) => {
+            const text = `${clean(bt?.name)} ${clean(bt?.description)}`;
+            return new RegExp(`\\b${t.id}\\b`, 'i').test(text);
+        });
+        return carrier && clean(carrier.id) ? { ...t, bound_to: clean(carrier.id) } : { ...t, bound_to: undefined };
+    });
+}
