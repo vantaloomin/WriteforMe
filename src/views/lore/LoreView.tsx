@@ -19,6 +19,8 @@ import {
     type StudioFormField
 } from '@/components';
 
+import { LoreProposalsPanel } from './LoreProposalsPanel';
+
 export interface LoreItemRecord extends LoreEntryItem {
     id?: string;
     related_to?: string[];
@@ -286,6 +288,13 @@ export function LoreView({
                     </button>
                 </div>
             </div>
+
+            <LoreProposalsPanel
+                story={story}
+                setStory={(updater) => setStory(updater)}
+                ingestLore={ingestLore}
+                showToast={showToast}
+            />
 
             {!story.lore || story.lore.length === 0 ? (
                 <div className="text-center py-14 border border-dashed border-edge-strong rounded-2xl bg-surface p-8 space-y-4 shadow-sm">

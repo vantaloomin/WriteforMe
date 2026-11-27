@@ -25,6 +25,8 @@ export interface FeatureOptions {
     phraseHabitWatch: boolean;
     /** Tell Claude where the repeated start of the scene-writing prompt ends, so it is cached. */
     promptCacheMarks: boolean;
+    /** Hold lore the model adds by itself for the author to approve, instead of adding it at once. */
+    reviewNewLore: boolean;
     /** Ask the main characters in a scene for their own lines before it is written: 'off', 'key' or 'all'. */
     characterLines: CharacterLinesMode;
     /** Where Autopilot pauses by itself: 'never', 'scene', 'sequence' or 'act'. */
@@ -40,6 +42,7 @@ export const DEFAULT_FEATURE_OPTIONS: FeatureOptions = {
     summaryCheck: true,
     phraseHabitWatch: true,
     promptCacheMarks: true,
+    reviewNewLore: false,
     characterLines: 'off',
     autopilotPauseAt: 'never',
     autopilotTokenCap: 0,
