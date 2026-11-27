@@ -19,6 +19,11 @@ const TOGGLES: Array<{ key: BooleanOption; title: string; help: string }> = [
         key: 'summaryCheck',
         title: 'Story So Far Check',
         help: 'Before a rewritten "story so far" replaces the old one, checks that every name, number and quote it held is still there. A draft that drops one is asked again once, and anything still missing is added back word for word.'
+    },
+    {
+        key: 'phraseHabitWatch',
+        title: 'Repeated Phrase Watch',
+        help: 'Before a scene is written, the last six scenes are read in code for wording used in three or more of them, and the writer is told not to use it again. No extra model call.'
     }
 ];
 
