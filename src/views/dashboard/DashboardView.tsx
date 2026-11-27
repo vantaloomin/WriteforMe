@@ -73,6 +73,8 @@ export function DashboardView({
     handleExportEpub,
     handleDownloadStoryAudio,
     handleExportAudioDramaTxt,
+    handleExportMarkdown,
+    handleExportPdf,
     isExportingStoryAudio,
     isExportingSequenceAudio,
     isExportingSceneAudio,
@@ -159,6 +161,8 @@ export function DashboardView({
                     handleExportEpub={handleExportEpub}
                     handleDownloadStoryAudio={handleDownloadStoryAudio}
                     handleExportAudioDramaTxt={handleExportAudioDramaTxt}
+                    handleExportMarkdown={handleExportMarkdown}
+                    handleExportPdf={handleExportPdf}
                     isExportingStoryAudio={isExportingStoryAudio}
                     isExportingSequenceAudio={isExportingSequenceAudio}
                     isExportingSceneAudio={isExportingSceneAudio}
