@@ -15,3 +15,4 @@ export * from './logDetail';
 export * from './outlineExpansion';
 export * from './restorePoints';
 export * from './contentDial';
+export * from './relationshipGraph';
