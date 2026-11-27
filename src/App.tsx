@@ -43,7 +43,7 @@ import {
 } from '@/services/storage';
 import { EmbeddingService, VectorStore } from '@/services/rag';
 
-import { findCastIndexForChar, useActiveStory, useAppUpdates, useAutopilotControl, useAutopilotLoop, useDesktopBackends, useArchetypeOptions, useAudioFollowState, useGenerationStatus, useNarrativeLensesToggle, useRelationshipMatrix, useSettingsDisclosures, useAudioProduction, useCustomNarrativeModes, useDirectivePlanEditors, useDirectiveWorkspaceState, useEditorialHarnessState, useEpistemicEditors, useLogDetailModal, useLoreBrowser, useLoreImport, useMcpBridge, useModelCatalog, useNovelIgnoreRules, useOutlineCollapseState, useOutlineExpansion, usePipelineViewState, useRagPanelState, useReaderController, useSceneWorkspaceState, useSetupDraft, useShellModals, useSlopConfig, useStoryEditors, useEnsureStoryId, useStoryAutosave, useStoryHydration, useStoryImages, useStoryLibrary, useStoryReset, useStoryTransfer, useTtsPlayback, useVoiceManagement } from '@/hooks';
+import { findCastIndexForChar, useActiveStory, useAppUpdates, useAutopilotControl, useAutopilotLoop, useDesktopBackends, useLocalEmbeddingModel, useLocalEmbeddingReindex, useArchetypeOptions, useAudioFollowState, useGenerationStatus, useNarrativeLensesToggle, useRelationshipMatrix, useSettingsDisclosures, useAudioProduction, useCustomNarrativeModes, useDirectivePlanEditors, useDirectiveWorkspaceState, useEditorialHarnessState, useEpistemicEditors, useLogDetailModal, useLoreBrowser, useLoreImport, useMcpBridge, useModelCatalog, useNovelIgnoreRules, useOutlineCollapseState, useOutlineExpansion, usePipelineViewState, useRagPanelState, useReaderController, useSceneWorkspaceState, useSetupDraft, useShellModals, useSlopConfig, useStoryEditors, useEnsureStoryId, useStoryAutosave, useStoryHydration, useStoryImages, useStoryLibrary, useStoryReset, useStoryTransfer, useTtsPlayback, useVoiceManagement } from '@/hooks';
 import {
     distillLore as orchestrateDistillLore,
     ingestLore as orchestrateIngestLore,
@@ -191,6 +191,7 @@ import {
                 openReleaseNotes
             } = useAppUpdates({ showToast });
             useDesktopBackends({ showToast });
+            const localEmbeddingModel = useLocalEmbeddingModel();
 
             const setSelectedAct = useUiStore(s => s.setSelectedAct);
             const selectedSequence = useUiStore(s => s.selectedSequence);
@@ -1346,6 +1347,7 @@ import {
             const ingestLoreBatch = (loreList: CtxArgs<typeof orchestrateIngestLoreBatch>[0], options: CtxArgs<typeof orchestrateIngestLoreBatch>[1] = {}) => orchestrateIngestLoreBatch(getPipelineCtx(), loreList, options);
 
             const rebuildRagIndex = () => orchestrateRebuildRagIndex(getPipelineCtx());
+            useLocalEmbeddingReindex(rebuildRagIndex, embeddingProvider === 'llamacpp');
 
             // Build Graph on Load/Change
             useEffect(() => {
@@ -1383,8 +1385,8 @@ import {
                 else if (embeddingProvider === 'nanogpt') key = nanoGptKey;
                 else if (embeddingProvider === 'koboldcpp' || embeddingProvider === 'codex') key = "";
 
-                embeddingService.current = new EmbeddingService(key, embeddingProvider, koboldUrl, codexUrl);
-            }, [apiKey, openRouterKey, nanoGptKey, koboldUrl, codexUrl, embeddingProvider]);
+                embeddingService.current = new EmbeddingService(key, embeddingProvider, koboldUrl, codexUrl, localEmbeddingModel);
+            }, [apiKey, openRouterKey, nanoGptKey, koboldUrl, codexUrl, embeddingProvider, localEmbeddingModel]);
 
 
 

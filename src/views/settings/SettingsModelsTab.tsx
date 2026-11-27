@@ -15,7 +15,9 @@ import {
     DEFAULT_TOKEN_LIMITS
 } from '@/config';
 import { getKoboldLoadedModelName } from '@/services/llm';
+import { isLocalEmbeddingAvailable } from '@/services/rag';
 import { CLI_BRIDGE_DEFAULT_URLS, isCliBridgeProvider } from '@/types';
+import { SettingsLocalEmbedding } from './SettingsLocalEmbedding';
 import type { SettingsModelsTabProps } from './types';
 
 function readKoboldGlobalModel(): string | undefined {
@@ -36,6 +38,9 @@ const PROVIDER_TABS = [
 const EMBEDDING_PROVIDER_TABS = PROVIDER_TABS.filter(
     (p) => p.id !== 'claude' && p.id !== 'anthropic'
 );
+
+/** The desktop app's own llama.cpp model; offered only where the app can run it. */
+const BUILT_IN_EMBEDDING_TAB = { id: 'llamacpp', label: 'Built-in' } as const;
 
 const OVERRIDE_PROVIDER_TABS = [
     { id: '', label: 'Inherit (Primary)' },
@@ -1087,8 +1092,15 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                             <label className="block text-xs font-bold text-ink-700 uppercase tracking-wider font-mono">
                                 Embedding Provider (RAG)
                             </label>
-                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 bg-mist-100 p-1 rounded-xl border border-edge-strong">
-                                {EMBEDDING_PROVIDER_TABS.map((p) => (
+                            <div
+                                className={`grid grid-cols-2 ${
+                                    isLocalEmbeddingAvailable() ? 'sm:grid-cols-6' : 'sm:grid-cols-5'
+                                } gap-1.5 bg-mist-100 p-1 rounded-xl border border-edge-strong`}
+                            >
+                                {[
+                                    ...(isLocalEmbeddingAvailable() ? [BUILT_IN_EMBEDDING_TAB] : []),
+                                    ...EMBEDDING_PROVIDER_TABS
+                                ].map((p) => (
                                     <button
                                         key={p.id}
                                         type="button"
@@ -1103,13 +1115,19 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                                     </button>
                                 ))}
                             </div>
-                            <p className="text-xs text-ink-500 mt-2">
-                                After switching providers, use &quot;Rebuild RAG index&quot; in World Lore.
-                            </p>
-                            <p className="text-xs text-ink-500 mt-1">
-                                The lore index is rebuilt only when the story&apos;s lore or the embedding provider
-                                changes.
-                            </p>
+                            {embeddingProvider === BUILT_IN_EMBEDDING_TAB.id && isLocalEmbeddingAvailable() ? (
+                                <SettingsLocalEmbedding />
+                            ) : (
+                                <>
+                                <p className="text-xs text-ink-500 mt-2">
+                                    After switching providers, use &quot;Rebuild RAG index&quot; in World Lore.
+                                </p>
+                                <p className="text-xs text-ink-500 mt-1">
+                                    The lore index is rebuilt only when the story&apos;s lore or the embedding provider
+                                    changes.
+                                </p>
+                                </>
+                            )}
                         </div>
                     </div>
                 )}
