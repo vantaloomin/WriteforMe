@@ -90,6 +90,7 @@ import {
 import { getCharacterDetails, runArchivistForScene } from './continuityPipeline';
 import { DIRECTIVE_REVIEW_OUTPUT_FORMAT_SCHEMA } from './directiveReview';
 import { runAgentWithEscalation } from './escalation';
+import { gatherCharacterLines } from './characterLines';
 import { buildProseContext, type ProseContextCastMember } from './proseContext';
 import { markRestorePoint } from './restorePoint';
 import { generateScenes } from './sceneBlueprints';
@@ -1436,6 +1437,21 @@ ${compressorInputSoFar}
 
         const dynamicBannedList = getDynamicBannedPhrases(recentProseCombined, dynamicExclusions);
 
+        // Characters write their own lines (opt-in): asked once, for a fresh draft only. A revision
+        // keeps the dialogue it already has.
+        let characterLinesBlock = '';
+        if (forceFullRewrite || !existingProseText) {
+            characterLinesBlock = await gatherCharacterLines(ctx, {
+                story: storyToUse as never,
+                scene,
+                seq,
+                s,
+                scenesInSequence: scenesList.length,
+                sequenceNumber: Number(sequenceData.number || seq + 1 || 1),
+                activeCast: activeCast as unknown as ProseContextCastMember[]
+            });
+        }
+
         const getProseContext = () => {
             const liveStory = ctx.getStory() || storyToUse;
             const liveScenesMap = asRecord(liveStory.scenes);
@@ -1480,7 +1496,8 @@ ${compressorInputSoFar}
                     rollingDialogueStats,
                     existingProseText: forceFullRewrite ? '' : existingProseText,
                     existingCritique: forceFullRewrite ? '' : existingCritique,
-                    forceFullRewrite
+                    forceFullRewrite,
+                    characterLinesBlock
                 }) +
                 (dynamicBannedList.length > 0
                     ? `

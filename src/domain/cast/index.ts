@@ -4,5 +4,6 @@
  */
 
 export * from './board';
+export * from './characterLines';
 export * from './checks';
 export * from './templateData';

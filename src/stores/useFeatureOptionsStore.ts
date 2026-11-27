@@ -5,6 +5,7 @@
  * through the store.
  */
 
+import { isCharacterLinesMode, type CharacterLinesMode } from '@/domain/cast/characterLines';
 import { create } from 'zustand';
 import { STORAGE_KEYS } from '@/config';
 import {
@@ -24,6 +25,8 @@ export interface FeatureOptions {
     phraseHabitWatch: boolean;
     /** Tell Claude where the repeated start of the scene-writing prompt ends, so it is cached. */
     promptCacheMarks: boolean;
+    /** Ask the main characters in a scene for their own lines before it is written: 'off', 'key' or 'all'. */
+    characterLines: CharacterLinesMode;
     /** Where Autopilot pauses by itself: 'never', 'scene', 'sequence' or 'act'. */
     autopilotPauseAt: AutopilotPauseAt;
     /** Thousands of tokens one Autopilot run may use; 0 means no cap. */
@@ -37,6 +40,7 @@ export const DEFAULT_FEATURE_OPTIONS: FeatureOptions = {
     summaryCheck: true,
     phraseHabitWatch: true,
     promptCacheMarks: true,
+    characterLines: 'off',
     autopilotPauseAt: 'never',
     autopilotTokenCap: 0,
     autopilotSpendCap: 0
@@ -52,6 +56,7 @@ export function normalizeFeatureOptions(raw: unknown): FeatureOptions {
         }
     });
     if (!isAutopilotPauseAt(next.autopilotPauseAt)) next.autopilotPauseAt = 'never';
+    if (!isCharacterLinesMode(next.characterLines)) next.characterLines = 'off';
     next.autopilotTokenCap = cleanTokenCapK(next.autopilotTokenCap);
     next.autopilotSpendCap = cleanSpendCap(next.autopilotSpendCap);
     return next;

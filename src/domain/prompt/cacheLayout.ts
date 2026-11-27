@@ -63,6 +63,7 @@ export const PROSE_SECTION_TIERS: Readonly<Record<string, CacheTier>> = {
     scene_blueprint: 'scene',
     dialogue_pacing_target: 'scene',
     phrase_habits: 'scene',
+    character_lines: 'scene',
     current_scene_prior_draft_context: 'call',
     mandatory_full_rewrite_mandate: 'call',
     directive_requirement: 'call'
