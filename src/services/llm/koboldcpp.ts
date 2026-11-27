@@ -4,7 +4,9 @@
  * sampler tuning, GBNF grammar support, cloud-model sanitization, and health probe.
  */
 
+import { DEFAULT_SERVICE_URLS } from '@/config';
 import { fetchWithTimeout } from '@/services/http';
+import { isCliBridgeProvider } from '@/types';
 import { cleanJson, extractReasoningAndContent } from '@/utils';
 import { getKoboldLoadedModelName } from './koboldRuntime';
 import {
@@ -82,7 +84,7 @@ export async function callKoboldCPP(
     optionsOrUndefined: LlmCallOptions = {}
 ): Promise<unknown> {
     try {
-        let baseUrl = 'http://localhost:5001';
+        let baseUrl: string = DEFAULT_SERVICE_URLS.koboldcpp;
         let model: string;
         let prompt: string;
         let systemPrompt: string;
@@ -131,11 +133,11 @@ export async function callKoboldCPP(
         const cleanBaseUrl =
             baseUrl && String(baseUrl).trim()
                 ? String(baseUrl).trim().replace(/\/+$/, '')
-                : 'http://localhost:5001';
+                : DEFAULT_SERVICE_URLS.koboldcpp;
 
         let sanitizedKoboldModel = model;
         const globalLoaded = getGlobalKoboldLoadedModel();
-        if (opts.provider !== 'codex') {
+        if (!isCliBridgeProvider(opts.provider)) {
             if (
                 !sanitizedKoboldModel ||
                 sanitizedKoboldModel === 'koboldcpp' ||
@@ -144,7 +146,7 @@ export async function callKoboldCPP(
                 sanitizedKoboldModel = globalLoaded || 'koboldcpp';
             }
         }
-        const modelId = opts.provider === 'codex' ? model || undefined : sanitizedKoboldModel;
+        const modelId = isCliBridgeProvider(opts.provider) ? model || undefined : sanitizedKoboldModel;
 
         const messages: LlmChatMessage[] =
             opts.messages && Array.isArray(opts.messages)
@@ -430,14 +432,14 @@ export async function callKoboldCPP(
             '';
 
         const actualKoboldReportedModel =
-            opts.provider !== 'codex'
+            !isCliBridgeProvider(opts.provider)
                 ? globalLoaded ||
                   (data.model && !isCloudModelName(data.model) && data.model !== 'koboldcpp'
                       ? data.model
                       : modelId && !isCloudModelName(modelId)
                         ? modelId
                         : 'koboldcpp')
-                : data.model || modelId || 'codex';
+                : data.model || modelId || opts.provider || 'codex';
 
         if (toolCalls.length > 0 || opts.returnFullData) {
             if (opts.onSuccess) {
@@ -541,12 +543,12 @@ export async function callKoboldCPP(
 }
 
 export async function checkKoboldCPPStatus(
-    baseUrl = 'http://localhost:5001'
+    baseUrl: string = DEFAULT_SERVICE_URLS.koboldcpp
 ): Promise<KoboldStatusResult> {
     const cleanUrl =
         baseUrl && String(baseUrl).trim()
             ? String(baseUrl).trim().replace(/\/+$/, '')
-            : 'http://localhost:5001';
+            : DEFAULT_SERVICE_URLS.koboldcpp;
     try {
         const response = await fetchWithTimeout(
             `${cleanUrl}/v1/models`,

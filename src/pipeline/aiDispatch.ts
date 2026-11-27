@@ -4,7 +4,16 @@
  * token ceilings, Kobold sampler profiles, prompt-log telemetry, and transient/timeout/budget retries.
  */
 
-import { getPipelineStepInfo, mapLogNameToStepId } from '@/config';
+import {
+    CLOUD_API_URLS,
+    DEFAULT_API_TIMEOUT_SEC,
+    DEFAULT_SERVICE_URLS,
+    DEFAULT_TOKEN_LIMITS,
+    LOG_AND_PROMPT_LIMITS,
+    RETRY_LIMITS,
+    getPipelineStepInfo,
+    mapLogNameToStepId
+} from '@/config';
 import {
     buildKoboldSamplerSettings,
     callGemini,
@@ -22,8 +31,9 @@ import {
     type ProviderModelSettings,
     type ThinkingBudgetSettings
 } from '@/services/llm';
+import { CLI_BRIDGE_DEFAULT_URLS, isCliBridgeProvider, isLocalProvider, type CliBridgeProviderId } from '@/types';
 
-export const PROMPT_LOG_CAP = 250;
+export const PROMPT_LOG_CAP = LOG_AND_PROMPT_LIMITS.promptLogCap;
 
 export interface PromptLogErrorRecord {
     attempt: number;
@@ -83,6 +93,7 @@ export interface AiDispatchSettings {
     nanoGptKey?: string;
     koboldUrl?: string;
     codexUrl?: string;
+    claudeUrl?: string;
     openRouterMaxTokens?: number;
     apiTimeout?: number;
     activeStory?: { id?: string; writing_mode?: string } | null;
@@ -212,11 +223,15 @@ export async function dispatchAI(
         isAudioDramaMode
     });
 
-    const apiTimeoutSec = settings.apiTimeout ?? 180;
+    const apiTimeoutSec = settings.apiTimeout ?? DEFAULT_API_TIMEOUT_SEC;
     const timeoutMs =
-        targetProvider === 'koboldcpp' || targetProvider === 'codex'
+        isLocalProvider(targetProvider)
             ? 15 * 60 * 1000
             : apiTimeoutSec * 1000;
+
+    const cliBridgeUrl = (provider: CliBridgeProviderId): string =>
+        (provider === 'claude' ? settings.claudeUrl : settings.codexUrl) ||
+        CLI_BRIDGE_DEFAULT_URLS[provider];
 
     const requestParameters: Record<string, unknown> = {
         provider: targetProvider,
@@ -235,7 +250,7 @@ export async function dispatchAI(
                     : 0.8,
         ...(targetProvider === 'koboldcpp' ? { sampler: koboldSamplerSettings } : {}),
         timeoutSeconds:
-            targetProvider === 'koboldcpp' || targetProvider === 'codex' ? 15 * 60 : apiTimeoutSec,
+            isLocalProvider(targetProvider) ? 15 * 60 : apiTimeoutSec,
         timeoutMs,
         thinking: {
             enabled: Boolean(thinkingConfig && thinkingConfig.enabled),
@@ -245,14 +260,14 @@ export async function dispatchAI(
         },
         endpoint:
             targetProvider === 'gemini'
-                ? `https://generativelanguage.googleapis.com/v1beta/models/${currentModelToUse}:generateContent`
+                ? `${CLOUD_API_URLS.geminiModels}/${currentModelToUse}:generateContent`
                 : targetProvider === 'nanogpt'
-                  ? 'https://nano-gpt.com/api/v1/chat/completions'
+                  ? CLOUD_API_URLS.nanoGptChat
                   : targetProvider === 'openrouter'
-                    ? 'https://openrouter.ai/api/v1/chat/completions'
-                    : targetProvider === 'codex'
-                      ? `${settings.codexUrl || 'http://localhost:5010'}/v1/chat/completions`
-                      : `${settings.koboldUrl || 'http://localhost:5001'}/v1/chat/completions`
+                    ? CLOUD_API_URLS.openRouterChat
+                    : isCliBridgeProvider(targetProvider)
+                      ? `${cliBridgeUrl(targetProvider)}/v1/chat/completions`
+                      : `${settings.koboldUrl || DEFAULT_SERVICE_URLS.koboldcpp}/v1/chat/completions`
     };
 
     const pipelineAttemptMatch = logName ? logName.match(/Attempt\s+(\d+)/i) : null;
@@ -276,9 +291,11 @@ export async function dispatchAI(
         provider: targetProvider,
         status: 'pending',
         attempts: 1,
-        maxRetries: 3,
+        maxRetries: RETRY_LIMITS.apiMaxRetries,
         pipelineAttempt: pipelineAttemptMatch ? parseInt(pipelineAttemptMatch[1], 10) : null,
-        pipelineMaxAttempts: pipelineMaxAttemptMatch ? parseInt(pipelineMaxAttemptMatch[1], 10) : 3,
+        pipelineMaxAttempts: pipelineMaxAttemptMatch
+            ? parseInt(pipelineMaxAttemptMatch[1], 10)
+            : RETRY_LIMITS.apiMaxRetries,
         errors: [],
         durationSec: null,
         durationMs: null,
@@ -297,7 +314,7 @@ export async function dispatchAI(
     };
     callbacks.setPromptLog?.((prev) => [logEntry, ...prev].slice(0, PROMPT_LOG_CAP));
 
-    const maxRetries = 3;
+    const maxRetries = RETRY_LIMITS.apiMaxRetries;
     let attempt = 0;
     let timeoutRetries = 0;
 
@@ -323,7 +340,7 @@ export async function dispatchAI(
         modelRole: activeRole,
         timeout: timeoutMs,
         ...(targetProvider === 'openrouter' ? { sessionId: openRouterSessionId } : {}),
-        ...(targetProvider === 'codex' ? { provider: 'codex' } : {}),
+        ...(isCliBridgeProvider(targetProvider) ? { provider: targetProvider } : {}),
         onSuccess: (metadata: LlmSuccessMetadata) => {
             const durationSec = ((performance.now() - startTime) / 1000).toFixed(2);
             const durationMs = Math.round(performance.now() - startTime);
@@ -412,9 +429,9 @@ export async function dispatchAI(
                     isJson,
                     options
                 );
-            } else if (targetProvider === 'codex') {
+            } else if (isCliBridgeProvider(targetProvider)) {
                 response = await callKoboldCPP(
-                    settings.codexUrl || 'http://localhost:5010',
+                    cliBridgeUrl(targetProvider),
                     currentModelToUse,
                     prompt,
                     finalSystemPrompt,
@@ -423,7 +440,7 @@ export async function dispatchAI(
                 );
             } else if (targetProvider === 'koboldcpp') {
                 response = await callKoboldCPP(
-                    settings.koboldUrl || 'http://localhost:5001',
+                    settings.koboldUrl || DEFAULT_SERVICE_URLS.koboldcpp,
                     currentModelToUse,
                     prompt,
                     finalSystemPrompt,
@@ -445,7 +462,10 @@ export async function dispatchAI(
             const durationMs = Math.round(performance.now() - startTime);
             const respStr =
                 typeof response === 'string' ? response : JSON.stringify(response, null, 2);
-            const snippet = respStr.length > 300 ? `${respStr.slice(0, 300)}...` : respStr;
+            const snippet =
+                respStr.length > LOG_AND_PROMPT_LIMITS.responseSnippetChars
+                    ? `${respStr.slice(0, LOG_AND_PROMPT_LIMITS.responseSnippetChars)}...`
+                    : respStr;
             const estimatedRespTokens = Math.round(respStr.trim().split(/\s+/).length * 1.33);
             const estimatedPromptTokens = Math.round(
                 ((finalSystemPrompt || '') + ' ' + (prompt || '')).trim().split(/\s+/).length *
@@ -584,7 +604,9 @@ export async function dispatchAI(
                         targetProvider === 'openrouter'
                             ? getOpenRouterModelLimits(currentModelToUse)
                             : null;
-                    const maxAllowedCeiling = modelLimits ? modelLimits.maxOutputTokens : 65536;
+                    const maxAllowedCeiling = modelLimits
+                        ? modelLimits.maxOutputTokens
+                        : DEFAULT_TOKEN_LIMITS.fallbackMaxOutputTokens;
 
                     if (attempt === 1) {
                         options.max_tokens = maxAllowedCeiling;
@@ -701,7 +723,7 @@ export async function dispatchAI(
                             errorDetails: String(errObj?.stack || errObj?.message || error || finalMsg),
                             attempts: attempt,
                             actionTaken: isCreditsError
-                                ? 'OpenRouter credits depleted. Refill credits at https://openrouter.ai/credits to continue.'
+                                ? `OpenRouter credits depleted. Refill credits at ${CLOUD_API_URLS.openRouterCreditsPage} to continue.`
                                 : isAuthError
                                   ? 'API key invalid or missing. Update API key in Settings.'
                                   : isNotFoundError

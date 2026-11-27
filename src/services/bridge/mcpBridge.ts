@@ -9,15 +9,21 @@
  * WebSocket connection never acts on a stale closure.
  */
 
+import {
+    APP_VERSION,
+    DEFAULT_SERVICE_URLS,
+    STORAGE_KEYS,
+    TIMEOUTS_MS
+} from '@/config';
 import { countStoryWords } from '@/domain/story';
 import { migrateStoryToSequences } from '@/domain/lifecycle';
 import { safeLocalStorageSet } from '@/utils';
 
-export const BRIDGE_VERSION = '2.1.1';
-export const DEFAULT_MCP_BRIDGE_URL = 'ws://127.0.0.1:3002';
+export const BRIDGE_VERSION = APP_VERSION;
+export const DEFAULT_MCP_BRIDGE_URL = DEFAULT_SERVICE_URLS.mcpBridge;
 export const MCP_BRIDGE_MAX_RETRIES = 3;
 
-export const BRIDGE_PROVIDERS = ['gemini', 'openrouter', 'nanogpt', 'koboldcpp', 'codex'] as const;
+export const BRIDGE_PROVIDERS = ['gemini', 'openrouter', 'nanogpt', 'koboldcpp', 'codex', 'claude'] as const;
 export type BridgeProvider = (typeof BRIDGE_PROVIDERS)[number];
 
 /** Sub-actions accepted by `triggerPipelineStep`. Keep in sync with the enum in `mcp-server/index.mjs`. */
@@ -108,11 +114,13 @@ export interface BridgeState {
     nanoGptModel: string;
     koboldModel: string;
     codexModel: string;
+    claudeModel: string;
     apiKey: string;
     openRouterKey: string;
     nanoGptKey: string;
     koboldUrl: string;
     codexUrl: string;
+    claudeUrl: string;
     loading: boolean;
     loadingStep: string;
     continuousAutopilot: boolean;
@@ -155,11 +163,13 @@ export interface BridgeActions {
     setNanoGptModel: Setter;
     setKoboldModel: Setter;
     setCodexModel: Setter;
+    setClaudeModel: Setter;
     setApiKey: Setter;
     setOpenRouterKey: Setter;
     setNanoGptKey: Setter;
     setKoboldUrl: Setter;
     setCodexUrl: Setter;
+    setClaudeUrl: Setter;
     setInputTitle: Setter;
     setInputConcept: Setter;
     setInputAuthorNote: Setter;
@@ -213,7 +223,7 @@ const sceneProse = (story: BridgeStory, seq: BridgeSequence, scene: BridgeScene)
  */
 export function createBridgeDispatcher(deps: BridgeDeps): BridgeDispatch {
     const now = deps.now || (() => Date.now());
-    const setupSettleMs = deps.setupSettleMs ?? 120;
+    const setupSettleMs = deps.setupSettleMs ?? TIMEOUTS_MS.mcpSetupSettle;
 
     return async function handleBridgeAction(action, rawParams) {
         const params: BridgeParams = rawParams || {};
@@ -256,11 +266,13 @@ export function createBridgeDispatcher(deps: BridgeDeps): BridgeDispatch {
                     nanoGptModel: s.nanoGptModel,
                     koboldModel: s.koboldModel,
                     codexModel: s.codexModel,
+                    claudeModel: s.claudeModel,
                     hasGeminiKey: Boolean(s.apiKey),
                     hasOpenRouterKey: Boolean(s.openRouterKey),
                     hasNanoGptKey: Boolean(s.nanoGptKey),
                     koboldUrl: s.koboldUrl,
-                    codexUrl: s.codexUrl
+                    codexUrl: s.codexUrl,
+                    claudeUrl: s.claudeUrl
                 };
             }
 
@@ -281,28 +293,28 @@ export function createBridgeDispatcher(deps: BridgeDeps): BridgeDispatch {
                 // Apply provider & role logic
                 if (role === 'all' || role === 'dev') {
                     a.setApiProvider(provider);
-                    safeLocalStorageSet('ellipsisprose_api_provider', provider);
+                    safeLocalStorageSet(STORAGE_KEYS.apiProvider, provider);
                     a.setDevProvider(provider);
-                    safeLocalStorageSet('ellipsisprose_dev_provider', provider);
+                    safeLocalStorageSet(STORAGE_KEYS.devProvider, provider);
                     if (model) {
                         a.setDevModel(model);
-                        safeLocalStorageSet('ellipsisprose_dev_model', model);
+                        safeLocalStorageSet(STORAGE_KEYS.devModel, model);
                     }
                 }
                 if (role === 'review') {
                     a.setReviewProvider(provider);
-                    safeLocalStorageSet('ellipsisprose_review_provider', provider);
+                    safeLocalStorageSet(STORAGE_KEYS.reviewProvider, provider);
                     if (model) {
                         a.setReviewModel(model);
-                        safeLocalStorageSet('ellipsisprose_review_model', model);
+                        safeLocalStorageSet(STORAGE_KEYS.reviewModel, model);
                     }
                 }
                 if (role === 'prose') {
                     a.setProseProvider(provider);
-                    safeLocalStorageSet('ellipsisprose_prose_provider', provider);
+                    safeLocalStorageSet(STORAGE_KEYS.proseProvider, provider);
                     if (model) {
                         a.setProseModel(model);
-                        safeLocalStorageSet('ellipsisprose_prose_model', model);
+                        safeLocalStorageSet(STORAGE_KEYS.proseModel, model);
                     }
                 }
 
@@ -310,23 +322,27 @@ export function createBridgeDispatcher(deps: BridgeDeps): BridgeDispatch {
                 if (model) {
                     if (provider === 'gemini') {
                         a.setGeminiModel(model);
-                        safeLocalStorageSet('ellipsisprose_gemini_model', model);
+                        safeLocalStorageSet(STORAGE_KEYS.geminiModel, model);
                     }
                     if (provider === 'openrouter') {
                         a.setOpenRouterModel(model);
-                        safeLocalStorageSet('ellipsisprose_openrouter_model', model);
+                        safeLocalStorageSet(STORAGE_KEYS.openRouterModel, model);
                     }
                     if (provider === 'nanogpt') {
                         a.setNanoGptModel(model);
-                        safeLocalStorageSet('ellipsisprose_nanogpt_model', model);
+                        safeLocalStorageSet(STORAGE_KEYS.nanoGptModel, model);
                     }
                     if (provider === 'koboldcpp') {
                         a.setKoboldModel(model);
-                        safeLocalStorageSet('ellipsisprose_kobold_model', model);
+                        safeLocalStorageSet(STORAGE_KEYS.koboldModel, model);
                     }
                     if (provider === 'codex') {
                         a.setCodexModel(model);
-                        safeLocalStorageSet('ellipsisprose_codex_model', model);
+                        safeLocalStorageSet(STORAGE_KEYS.codexModel, model);
+                    }
+                    if (provider === 'claude') {
+                        a.setClaudeModel(model);
+                        safeLocalStorageSet(STORAGE_KEYS.claudeModel, model);
                     }
                 }
 
@@ -334,15 +350,15 @@ export function createBridgeDispatcher(deps: BridgeDeps): BridgeDispatch {
                 if (newApiKey) {
                     if (provider === 'gemini') {
                         a.setApiKey(newApiKey);
-                        safeLocalStorageSet('gemini_api_key', newApiKey);
+                        safeLocalStorageSet(STORAGE_KEYS.geminiApiKey, newApiKey);
                     }
                     if (provider === 'openrouter') {
                         a.setOpenRouterKey(newApiKey);
-                        safeLocalStorageSet('ellipsisprose_openrouter_key', newApiKey);
+                        safeLocalStorageSet(STORAGE_KEYS.openRouterKey, newApiKey);
                     }
                     if (provider === 'nanogpt') {
                         a.setNanoGptKey(newApiKey);
-                        safeLocalStorageSet('ellipsisprose_nanogpt_key', newApiKey);
+                        safeLocalStorageSet(STORAGE_KEYS.nanoGptKey, newApiKey);
                     }
                 }
 
@@ -350,11 +366,15 @@ export function createBridgeDispatcher(deps: BridgeDeps): BridgeDispatch {
                 if (baseUrl) {
                     if (provider === 'koboldcpp') {
                         a.setKoboldUrl(baseUrl);
-                        safeLocalStorageSet('ellipsisprose_kobold_url', baseUrl);
+                        safeLocalStorageSet(STORAGE_KEYS.koboldUrl, baseUrl);
                     }
                     if (provider === 'codex') {
                         a.setCodexUrl(baseUrl);
-                        safeLocalStorageSet('ellipsisprose_codex_url', baseUrl);
+                        safeLocalStorageSet(STORAGE_KEYS.codexUrl, baseUrl);
+                    }
+                    if (provider === 'claude') {
+                        a.setClaudeUrl(baseUrl);
+                        safeLocalStorageSet(STORAGE_KEYS.claudeUrl, baseUrl);
                     }
                 }
 

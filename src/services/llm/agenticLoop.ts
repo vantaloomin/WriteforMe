@@ -5,7 +5,13 @@
  * meta-commentary filtering, and Audio Drama normalization.
  */
 
-import { getPipelineStepInfo } from '@/config';
+import {
+    CLOUD_API_URLS,
+    DEFAULT_SERVICE_URLS,
+    LOG_AND_PROMPT_LIMITS,
+    getPipelineStepInfo
+} from '@/config';
+import { CLI_BRIDGE_DEFAULT_URLS, isCliBridgeProvider, isLocalProvider } from '@/types';
 import {
     isAudioDramaScriptText,
     isMetaCommentaryText,
@@ -25,7 +31,7 @@ import type {
     OpenAICompatibleFullResult
 } from './types';
 
-export const DEFAULT_PROMPT_LOG_CAP = 250;
+export const DEFAULT_PROMPT_LOG_CAP = LOG_AND_PROMPT_LIMITS.promptLogCap;
 
 export interface AgenticLoopParams {
     provider?: string;
@@ -141,7 +147,7 @@ When done, call commit_scene_prose, or enclose your completed narrative inside <
     const defaultMaxTokens =
         effectiveProvider === 'openrouter'
             ? 65536
-            : effectiveProvider === 'koboldcpp' || effectiveProvider === 'codex'
+            : isLocalProvider(effectiveProvider)
               ? 32768
               : 16384;
     const resolvedMaxTokens = options?.max_tokens || defaultMaxTokens;
@@ -170,16 +176,16 @@ When done, call commit_scene_prose, or enclose your completed narrative inside <
     const logCap = DEFAULT_PROMPT_LOG_CAP;
     const resolveEndpoint = (): string => {
         if (effectiveProvider === 'gemini') {
-            return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+            return `${CLOUD_API_URLS.geminiModels}/${model}:generateContent`;
         }
-        if (effectiveProvider === 'nanogpt') return 'https://nano-gpt.com/api/v1/chat/completions';
+        if (effectiveProvider === 'nanogpt') return CLOUD_API_URLS.nanoGptChat;
         if (effectiveProvider === 'openrouter') {
-            return 'https://openrouter.ai/api/v1/chat/completions';
+            return CLOUD_API_URLS.openRouterChat;
         }
-        if (effectiveProvider === 'codex') {
-            return `${baseUrl || 'http://localhost:5010'}/v1/chat/completions`;
+        if (isCliBridgeProvider(effectiveProvider)) {
+            return `${baseUrl || CLI_BRIDGE_DEFAULT_URLS[effectiveProvider]}/v1/chat/completions`;
         }
-        return `${baseUrl || 'http://localhost:5001'}/v1/chat/completions`;
+        return `${baseUrl || DEFAULT_SERVICE_URLS.koboldcpp}/v1/chat/completions`;
     };
 
     const runLoggedAgenticTurn = async <TResult>(
@@ -203,7 +209,7 @@ When done, call commit_scene_prose, or enclose your completed narrative inside <
             maxTokens: resolvedMaxTokens,
             temperature: resolvedTemp,
             timeoutSeconds:
-                effectiveProvider === 'koboldcpp' || effectiveProvider === 'codex'
+                isLocalProvider(effectiveProvider)
                     ? 15 * 60
                     : undefined,
             thinking: { enabled: false, budget: 0, effort: 'none', level: 'MINIMAL' },
@@ -568,6 +574,8 @@ When done, call commit_scene_prose, or enclose your completed narrative inside <
                 ? 'KoboldCPP'
                 : effectiveProvider === 'codex'
                   ? 'Codex'
+                  : effectiveProvider === 'claude'
+                    ? 'Claude Code'
                   : effectiveProvider === 'nanogpt'
                     ? 'nano-GPT'
                     : 'OpenRouter';
@@ -640,9 +648,9 @@ When done, call commit_scene_prose, or enclose your completed narrative inside <
                                 }) as Promise<OpenAICompatibleFullResult>;
                             }
                             const targetUrl =
-                                effectiveProvider === 'codex'
-                                    ? baseUrl || 'http://localhost:5010'
-                                    : baseUrl || 'http://localhost:5001';
+                                isCliBridgeProvider(effectiveProvider)
+                                    ? baseUrl || CLI_BRIDGE_DEFAULT_URLS[effectiveProvider]
+                                    : baseUrl || DEFAULT_SERVICE_URLS.koboldcpp;
                             return callKoboldCPP(targetUrl, model, '', systemPrompt, false, {
                                 ...turnOpts,
                                 provider: effectiveProvider,
@@ -657,7 +665,7 @@ When done, call commit_scene_prose, or enclose your completed narrative inside <
                         turnErr instanceof Error ? turnErr.message : turnErr || ''
                     ).toLowerCase();
                     if (
-                        (effectiveProvider === 'koboldcpp' || effectiveProvider === 'codex') &&
+                        isLocalProvider(effectiveProvider) &&
                         (errStr.includes('tool') ||
                             errStr.includes('schema') ||
                             errStr.includes('unrecognized') ||
@@ -695,9 +703,9 @@ When done, call commit_scene_prose, or enclose your completed narrative inside <
                             );
                         }
                         const targetUrl =
-                            effectiveProvider === 'codex'
-                                ? baseUrl || 'http://localhost:5010'
-                                : baseUrl || 'http://localhost:5001';
+                            isCliBridgeProvider(effectiveProvider)
+                                ? baseUrl || CLI_BRIDGE_DEFAULT_URLS[effectiveProvider]
+                                : baseUrl || DEFAULT_SERVICE_URLS.koboldcpp;
                         return callKoboldCPP(
                             targetUrl,
                             model,

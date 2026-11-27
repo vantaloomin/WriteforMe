@@ -17,12 +17,13 @@ const path = require('path');
 const { spawn, spawnSync } = require('child_process');
 
 const ROOT_DIR = __dirname;
+const PORTS = require('./src/config/ports.json');
 
 function parseArgs(argv) {
     const opts = {
-        webPort: Number(process.env.PORT || 3000),
-        bridgePort: Number(process.env.AUDIO_STUDIO_BRIDGE_PORT || 5020),
-        daemonPort: Number(process.env.AUDIOCPP_PORT || 8080),
+        webPort: Number(process.env.PORT || PORTS.web),
+        bridgePort: Number(process.env.AUDIO_STUDIO_BRIDGE_PORT || PORTS.audioStudioBridge),
+        daemonPort: Number(process.env.AUDIOCPP_PORT || PORTS.audioCpp),
         openBrowser: true,
         startBridge: true,
         prewarmAudio: process.env.ELLIPSISPROSE_PREWARM_AUDIO !== '0',
@@ -172,8 +173,13 @@ async function main() {
         const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
         const buildRes = spawnSync(npmCmd, ['run', 'build'], {
             cwd: ROOT_DIR,
-            stdio: 'inherit'
+            stdio: 'inherit',
+            // Node 20.12+/22 refuses to spawn .cmd files without a shell (EINVAL, status null).
+            shell: process.platform === 'win32'
         });
+        if (buildRes.error) {
+            throw new Error(`Vite build could not start: ${buildRes.error.message}`);
+        }
         if (buildRes.status !== 0) {
             throw new Error(`Vite build failed with exit code ${buildRes.status}`);
         }

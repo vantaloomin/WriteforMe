@@ -7,12 +7,24 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
-import { NANO_GPT_DEFAULT_MODELS } from '@/config';
+import {
+    API_TIMEOUT_BOUNDS,
+    DEFAULT_API_TIMEOUT_SEC,
+    DEFAULT_LLM_MODELS,
+    DEFAULT_SAVED_MODELS,
+    DEFAULT_SERVICE_URLS,
+    DEFAULT_THINKING_BUDGETS,
+    DEFAULT_TOKEN_LIMITS,
+    NANO_GPT_DEFAULT_MODELS,
+    STORAGE_KEYS,
+    UI_DELAYS_MS
+} from '@/config';
 import { dispatchAI, type PromptLogEntry } from '@/pipeline';
 import type { ComfyOptionsCatalog, ComfyStatusInfo } from '@/services/images';
 import { fetchComfyInfoCatalog } from '@/services/images';
 import {
     checkKoboldCPPStatus,
+    fetchClaudeCatalog,
     fetchCodexCatalog,
     fetchGeminiCatalog,
     fetchGeminiImageModelsCatalog,
@@ -32,7 +44,7 @@ import {
     type ParsedModelMetadata,
     type ProviderModelSettings
 } from '@/services/llm';
-import type { ModelDescriptor } from '@/types';
+import { CLI_BRIDGE_DEFAULT_URLS, isCliBridgeProvider, isLocalProvider, type ModelDescriptor } from '@/types';
 import { safeLocalStorageSet, safeSessionStorageSet } from '@/utils';
 import { useDebounce } from './useDebounce';
 
@@ -81,7 +93,7 @@ export function useModelSearch(
     }: UseModelSearchDependencies
 ): UseModelSearchResult {
     const [query, setQuery] = useState('');
-    const debouncedQuery = useDebounce(query, 300);
+    const debouncedQuery = useDebounce(query, UI_DELAYS_MS.searchDebounce);
     const [isSearching, setIsSearching] = useState(false);
     const [results, setResults] = useState<SearchModelResult[]>([]);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -93,7 +105,7 @@ export function useModelSearch(
 
         const runSearch = async (): Promise<void> => {
             const providerToUse = targetProvider || devProvider || 'gemini';
-            if (providerToUse === 'koboldcpp' || providerToUse === 'codex') {
+            if (isLocalProvider(providerToUse)) {
                 setResults([]);
                 setIsSearching(false);
                 return;
@@ -225,6 +237,12 @@ export interface UseModelCatalogResult {
     codexModelsList: CodexModelInfo[];
     codexStatus: KoboldStatusResult;
     codexEmbeddingStatus: Record<string, unknown> | null;
+    claudeUrl: string;
+    setClaudeUrl: Dispatch<SetStateAction<string>>;
+    claudeModel: string;
+    setClaudeModel: Dispatch<SetStateAction<string>>;
+    claudeModelsList: CodexModelInfo[];
+    claudeStatus: KoboldStatusResult;
     savedModels: string[];
     setSavedModels: Dispatch<SetStateAction<string[]>>;
     openRouterModelsList: OpenRouterCatalogModel[];
@@ -303,6 +321,7 @@ export interface UseModelCatalogResult {
     refreshNanoGptModels: (force?: boolean) => Promise<void>;
     checkKoboldStatus: () => Promise<void>;
     refreshCodexModels: () => Promise<void>;
+    refreshClaudeModels: () => Promise<void>;
     refreshComfyInfo: () => Promise<void>;
     handleCatalogRefresh: (targetProvider?: string | null) => Promise<void>;
     callAI: (
@@ -345,62 +364,66 @@ export function useModelCatalog({
         []
     );
     const [enableReview, setEnableReview] = useState(() => {
-        const val = localStorage.getItem('ellipsisprose_enable_review');
+        const val = localStorage.getItem(STORAGE_KEYS.enableReview);
         return val !== null ? val === 'true' : true;
     });
     const [enableStylePolish, setEnableStylePolish] = useState(() => {
-        const val = localStorage.getItem('ellipsisprose_enable_style_polish');
+        const val = localStorage.getItem(STORAGE_KEYS.enableStylePolish);
         return val !== null ? val === 'true' : true;
     });
     const [enableAudioDramaDirectionPass, setEnableAudioDramaDirectionPass] = useState(() => {
-        const val = localStorage.getItem('ellipsisprose_enable_audio_drama_direction');
+        const val = localStorage.getItem(STORAGE_KEYS.enableAudioDramaDirection);
         return val !== null ? val === 'true' : true;
     });
     const [apiProvider, setApiProvider] = useState(
-        () => localStorage.getItem('ellipsisprose_api_provider') || 'gemini'
+        () => localStorage.getItem(STORAGE_KEYS.apiProvider) || 'gemini'
     );
     const [embeddingProvider, setEmbeddingProvider] = useState(
         () =>
-            localStorage.getItem('ellipsisprose_embedding_provider') ||
-            (apiProvider === 'codex' ? 'gemini' : apiProvider)
+            localStorage.getItem(STORAGE_KEYS.embeddingProvider) ||
+            (isCliBridgeProvider(apiProvider) ? 'gemini' : apiProvider)
     );
-    const [apiKey, setApiKey] = useState(() => localStorage.getItem('gemini_api_key') || '');
+    const [apiKey, setApiKey] = useState(() => localStorage.getItem(STORAGE_KEYS.geminiApiKey) || '');
     const [apiTimeout, setApiTimeout] = useState(() => {
-        const val = localStorage.getItem('ellipsisprose_api_timeout');
-        const parsed = val !== null ? parseInt(val, 10) : 120;
-        return !isNaN(parsed) && parsed >= 5 && parsed <= 1800 ? parsed : 120;
+        const val = localStorage.getItem(STORAGE_KEYS.apiTimeout);
+        const parsed = val !== null ? parseInt(val, 10) : DEFAULT_API_TIMEOUT_SEC;
+        return !isNaN(parsed) &&
+            parsed >= API_TIMEOUT_BOUNDS.min &&
+            parsed <= API_TIMEOUT_BOUNDS.max
+            ? parsed
+            : DEFAULT_API_TIMEOUT_SEC;
     });
     const [geminiModel, setGeminiModel] = useState(
-        () => localStorage.getItem('ellipsisprose_gemini_model') || 'gemini-2.0-flash'
+        () => localStorage.getItem(STORAGE_KEYS.geminiModel) || DEFAULT_LLM_MODELS.gemini
     );
     const [geminiModelsList, setGeminiModelsList] = useState<string[]>([]);
     const [openRouterKey, setOpenRouterKey] = useState(
-        () => localStorage.getItem('ellipsisprose_openrouter_key') || ''
+        () => localStorage.getItem(STORAGE_KEYS.openRouterKey) || ''
     );
     const [openRouterModel, setOpenRouterModel] = useState(
-        () => localStorage.getItem('ellipsisprose_openrouter_model') || 'google/gemini-2.0-flash-001'
+        () => localStorage.getItem(STORAGE_KEYS.openRouterModel) || DEFAULT_LLM_MODELS.openrouter
     );
     const [openRouterMaxTokens, setOpenRouterMaxTokens] = useState(() => {
-        const val = localStorage.getItem('ellipsisprose_openrouter_max_tokens');
-        return val !== null ? parseInt(val, 10) : 65536;
+        const val = localStorage.getItem(STORAGE_KEYS.openRouterMaxTokens);
+        return val !== null ? parseInt(val, 10) : DEFAULT_TOKEN_LIMITS.openRouterMaxTokens;
     });
     const [nanoGptKey, setNanoGptKey] = useState(
-        () => localStorage.getItem('ellipsisprose_nanogpt_key') || ''
+        () => localStorage.getItem(STORAGE_KEYS.nanoGptKey) || ''
     );
     const [nanoGptModel, setNanoGptModel] = useState(
-        () => localStorage.getItem('ellipsisprose_nanogpt_model') || 'gpt-4o'
+        () => localStorage.getItem(STORAGE_KEYS.nanoGptModel) || DEFAULT_LLM_MODELS.nanogpt
     );
     const [koboldUrl, setKoboldUrl] = useState(
-        () => localStorage.getItem('ellipsisprose_kobold_url') || 'http://localhost:5001'
+        () => localStorage.getItem(STORAGE_KEYS.koboldUrl) || DEFAULT_SERVICE_URLS.koboldcpp
     );
     const [koboldModel, setKoboldModel] = useState(
-        () => localStorage.getItem('ellipsisprose_kobold_model') || 'koboldcpp'
+        () => localStorage.getItem(STORAGE_KEYS.koboldModel) || DEFAULT_LLM_MODELS.koboldcpp
     );
     const [codexUrl, setCodexUrl] = useState(
-        () => localStorage.getItem('ellipsisprose_codex_url') || 'http://localhost:5010'
+        () => localStorage.getItem(STORAGE_KEYS.codexUrl) || CLI_BRIDGE_DEFAULT_URLS.codex
     );
     const [codexModel, setCodexModel] = useState(
-        () => localStorage.getItem('ellipsisprose_codex_model') ?? 'gpt-5.6-luna'
+        () => localStorage.getItem(STORAGE_KEYS.codexModel) ?? DEFAULT_LLM_MODELS.codex
     );
     const [codexModelsList, setCodexModelsList] = useState<CodexModelInfo[]>([]);
     const [codexStatus, setCodexStatus] = useState<KoboldStatusResult>({
@@ -413,220 +436,241 @@ export function useModelCatalog({
         unknown
     > | null>(null);
     const codexRefreshId = useRef(0);
+    const [claudeUrl, setClaudeUrl] = useState(
+        () => localStorage.getItem(STORAGE_KEYS.claudeUrl) || CLI_BRIDGE_DEFAULT_URLS.claude
+    );
+    const [claudeModel, setClaudeModel] = useState(
+        () => localStorage.getItem(STORAGE_KEYS.claudeModel) ?? DEFAULT_LLM_MODELS.claude
+    );
+    const [claudeModelsList, setClaudeModelsList] = useState<CodexModelInfo[]>([]);
+    const [claudeStatus, setClaudeStatus] = useState<KoboldStatusResult>({
+        online: false,
+        model: null,
+        error: null
+    });
+    const claudeRefreshId = useRef(0);
     const [savedModels, setSavedModels] = useState<string[]>(() => {
-        const saved = localStorage.getItem('ellipsisprose_saved_models');
-        return saved ? (JSON.parse(saved) as string[]) : ['google/gemini-2.0-flash-001'];
+        const saved = localStorage.getItem(STORAGE_KEYS.savedModels);
+        return saved ? (JSON.parse(saved) as string[]) : [...DEFAULT_SAVED_MODELS];
     });
 
     const [openRouterModelsList, setOpenRouterModelsList] = useState<OpenRouterCatalogModel[]>(() => {
-        const cached = localStorage.getItem('ellipsisprose_openrouter_models_cache');
+        const cached = localStorage.getItem(STORAGE_KEYS.openRouterModelsCache);
         return cached ? (JSON.parse(cached) as OpenRouterCatalogModel[]) : [];
     });
     const [nanoGptModelsList, setNanoGptModelsList] = useState<NanoGptCatalogEntry[]>(() => {
-        const cached = localStorage.getItem('ellipsisprose_nanogpt_models_cache');
+        const cached = localStorage.getItem(STORAGE_KEYS.nanoGptModelsCache);
         return cached
             ? (JSON.parse(cached) as NanoGptCatalogEntry[])
             : [...NANO_GPT_DEFAULT_MODELS];
     });
     const [koboldStatus, setKoboldStatus] = useState('idle');
-    const [koboldLoadedModel, setKoboldLoadedModel] = useState(koboldModel || 'koboldcpp');
+    const [koboldLoadedModel, setKoboldLoadedModel] = useState(
+        koboldModel || DEFAULT_LLM_MODELS.koboldcpp
+    );
     const [koboldError, setKoboldError] = useState<string | null>(null);
 
     const [devProvider, setDevProvider] = useState(
         () =>
-            localStorage.getItem('ellipsisprose_dev_provider') ||
-            localStorage.getItem('ellipsisprose_api_provider') ||
+            localStorage.getItem(STORAGE_KEYS.devProvider) ||
+            localStorage.getItem(STORAGE_KEYS.apiProvider) ||
             'gemini'
     );
     const [devModel, setDevModel] = useState(
         () =>
-            localStorage.getItem('ellipsisprose_dev_model') ||
-            localStorage.getItem('ellipsisprose_gemini_model') ||
-            'gemini-2.0-flash'
+            localStorage.getItem(STORAGE_KEYS.devModel) ||
+            localStorage.getItem(STORAGE_KEYS.geminiModel) ||
+            DEFAULT_LLM_MODELS.gemini
     );
     const [reviewProvider, setReviewProvider] = useState(
-        () => localStorage.getItem('ellipsisprose_review_provider') || ''
+        () => localStorage.getItem(STORAGE_KEYS.reviewProvider) || ''
     );
     const [reviewModel, setReviewModel] = useState(
-        () => localStorage.getItem('ellipsisprose_review_model') || ''
+        () => localStorage.getItem(STORAGE_KEYS.reviewModel) || ''
     );
     const [proseProvider, setProseProvider] = useState(
-        () => localStorage.getItem('ellipsisprose_prose_provider') || ''
+        () => localStorage.getItem(STORAGE_KEYS.proseProvider) || ''
     );
     const [proseModel, setProseModel] = useState(
-        () => localStorage.getItem('ellipsisprose_prose_model') || ''
+        () => localStorage.getItem(STORAGE_KEYS.proseModel) || ''
     );
 
     const [useProseModel, setUseProseModel] = useState(
-        () => localStorage.getItem('ellipsisprose_use_prose_model') === 'true'
+        () => localStorage.getItem(STORAGE_KEYS.useProseModel) === 'true'
     );
     const [geminiProseModel, setGeminiProseModel] = useState(
-        () => localStorage.getItem('ellipsisprose_gemini_prose_model') || ''
+        () => localStorage.getItem(STORAGE_KEYS.geminiProseModel) || ''
     );
     const [openRouterProseModel, setOpenRouterProseModel] = useState(
-        () => localStorage.getItem('ellipsisprose_openrouter_prose_model') || ''
+        () => localStorage.getItem(STORAGE_KEYS.openRouterProseModel) || ''
     );
     const [nanoGptProseModel, setNanoGptProseModel] = useState(
-        () => localStorage.getItem('ellipsisprose_nanogpt_prose_model') || ''
+        () => localStorage.getItem(STORAGE_KEYS.nanoGptProseModel) || ''
     );
     const [koboldProseModel, setKoboldProseModel] = useState(
-        () => localStorage.getItem('ellipsisprose_kobold_prose_model') || ''
+        () => localStorage.getItem(STORAGE_KEYS.koboldProseModel) || ''
     );
     const [codexProseModel, setCodexProseModel] = useState(
-        () => localStorage.getItem('ellipsisprose_codex_prose_model') || ''
+        () => localStorage.getItem(STORAGE_KEYS.codexProseModel) || ''
     );
 
     const [enableThinkingAct, setEnableThinkingAct] = useState(() => {
-        const val = localStorage.getItem('ellipsisprose_enable_thinking_act');
+        const val = localStorage.getItem(STORAGE_KEYS.enableThinkingAct);
         return val !== null ? val === 'true' : true;
     });
     const [enableThinkingScene, setEnableThinkingScene] = useState(() => {
-        const val = localStorage.getItem('ellipsisprose_enable_thinking_scene');
+        const val = localStorage.getItem(STORAGE_KEYS.enableThinkingScene);
         return val !== null ? val === 'true' : true;
     });
     const [enableThinkingWriting, setEnableThinkingWriting] = useState(() => {
-        const val = localStorage.getItem('ellipsisprose_enable_thinking_writing');
+        const val = localStorage.getItem(STORAGE_KEYS.enableThinkingWriting);
         return val !== null ? val === 'true' : true;
     });
 
     const [thinkingBudgetStoryArc, setThinkingBudgetStoryArc] = useState(() => {
-        const val = localStorage.getItem('ellipsisprose_thinking_budget_story_arc');
-        return val !== null ? parseInt(val, 10) : 16384;
+        const val = localStorage.getItem(STORAGE_KEYS.thinkingBudgetStoryArc);
+        return val !== null ? parseInt(val, 10) : DEFAULT_THINKING_BUDGETS.storyArc;
     });
     const [thinkingBudgetAct, setThinkingBudgetAct] = useState(() => {
-        const val = localStorage.getItem('ellipsisprose_thinking_budget_act');
-        return val !== null ? parseInt(val, 10) : 16384;
+        const val = localStorage.getItem(STORAGE_KEYS.thinkingBudgetAct);
+        return val !== null ? parseInt(val, 10) : DEFAULT_THINKING_BUDGETS.act;
     });
     const [thinkingBudgetScene, setThinkingBudgetScene] = useState(() => {
-        const val = localStorage.getItem('ellipsisprose_thinking_budget_scene');
-        return val !== null ? parseInt(val, 10) : 16384;
+        const val = localStorage.getItem(STORAGE_KEYS.thinkingBudgetScene);
+        return val !== null ? parseInt(val, 10) : DEFAULT_THINKING_BUDGETS.scene;
     });
     const [thinkingBudgetWriting, setThinkingBudgetWriting] = useState(() => {
-        const val = localStorage.getItem('ellipsisprose_thinking_budget_writing');
-        return val !== null ? parseInt(val, 10) : 16384;
+        const val = localStorage.getItem(STORAGE_KEYS.thinkingBudgetWriting);
+        return val !== null ? parseInt(val, 10) : DEFAULT_THINKING_BUDGETS.writing;
     });
 
     // Persist Model & Thinking Settings
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_enable_review', enableReview);
+        safeLocalStorageSet(STORAGE_KEYS.enableReview, enableReview);
     }, [enableReview]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_enable_style_polish', enableStylePolish);
+        safeLocalStorageSet(STORAGE_KEYS.enableStylePolish, enableStylePolish);
     }, [enableStylePolish]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_enable_audio_drama_direction', enableAudioDramaDirectionPass);
+        safeLocalStorageSet(STORAGE_KEYS.enableAudioDramaDirection, enableAudioDramaDirectionPass);
     }, [enableAudioDramaDirectionPass]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_dev_provider', devProvider);
+        safeLocalStorageSet(STORAGE_KEYS.devProvider, devProvider);
     }, [devProvider]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_dev_model', devModel);
+        safeLocalStorageSet(STORAGE_KEYS.devModel, devModel);
     }, [devModel]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_review_provider', reviewProvider);
+        safeLocalStorageSet(STORAGE_KEYS.reviewProvider, reviewProvider);
     }, [reviewProvider]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_review_model', reviewModel);
+        safeLocalStorageSet(STORAGE_KEYS.reviewModel, reviewModel);
     }, [reviewModel]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_prose_provider', proseProvider);
+        safeLocalStorageSet(STORAGE_KEYS.proseProvider, proseProvider);
     }, [proseProvider]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_prose_model', proseModel);
+        safeLocalStorageSet(STORAGE_KEYS.proseModel, proseModel);
     }, [proseModel]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_api_provider', apiProvider);
+        safeLocalStorageSet(STORAGE_KEYS.apiProvider, apiProvider);
     }, [apiProvider]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_embedding_provider', embeddingProvider);
+        safeLocalStorageSet(STORAGE_KEYS.embeddingProvider, embeddingProvider);
     }, [embeddingProvider]);
     useEffect(() => {
-        safeLocalStorageSet('gemini_api_key', apiKey);
+        safeLocalStorageSet(STORAGE_KEYS.geminiApiKey, apiKey);
     }, [apiKey]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_api_timeout', apiTimeout);
+        safeLocalStorageSet(STORAGE_KEYS.apiTimeout, apiTimeout);
     }, [apiTimeout]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_gemini_model', geminiModel);
+        safeLocalStorageSet(STORAGE_KEYS.geminiModel, geminiModel);
     }, [geminiModel]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_openrouter_key', openRouterKey);
+        safeLocalStorageSet(STORAGE_KEYS.openRouterKey, openRouterKey);
     }, [openRouterKey]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_openrouter_model', openRouterModel);
+        safeLocalStorageSet(STORAGE_KEYS.openRouterModel, openRouterModel);
     }, [openRouterModel]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_openrouter_max_tokens', openRouterMaxTokens);
+        safeLocalStorageSet(STORAGE_KEYS.openRouterMaxTokens, openRouterMaxTokens);
     }, [openRouterMaxTokens]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_nanogpt_key', nanoGptKey);
+        safeLocalStorageSet(STORAGE_KEYS.nanoGptKey, nanoGptKey);
     }, [nanoGptKey]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_nanogpt_model', nanoGptModel);
+        safeLocalStorageSet(STORAGE_KEYS.nanoGptModel, nanoGptModel);
     }, [nanoGptModel]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_nanogpt_prose_model', nanoGptProseModel);
+        safeLocalStorageSet(STORAGE_KEYS.nanoGptProseModel, nanoGptProseModel);
     }, [nanoGptProseModel]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_kobold_url', koboldUrl);
+        safeLocalStorageSet(STORAGE_KEYS.koboldUrl, koboldUrl);
     }, [koboldUrl]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_kobold_model', koboldModel);
+        safeLocalStorageSet(STORAGE_KEYS.koboldModel, koboldModel);
     }, [koboldModel]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_codex_url', codexUrl);
+        safeLocalStorageSet(STORAGE_KEYS.codexUrl, codexUrl);
     }, [codexUrl]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_codex_model', codexModel);
+        safeLocalStorageSet(STORAGE_KEYS.codexModel, codexModel);
     }, [codexModel]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_codex_prose_model', codexProseModel);
+        safeLocalStorageSet(STORAGE_KEYS.codexProseModel, codexProseModel);
     }, [codexProseModel]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_saved_models', savedModels);
+        safeLocalStorageSet(STORAGE_KEYS.claudeUrl, claudeUrl);
+    }, [claudeUrl]);
+    useEffect(() => {
+        safeLocalStorageSet(STORAGE_KEYS.claudeModel, claudeModel);
+    }, [claudeModel]);
+    useEffect(() => {
+        safeLocalStorageSet(STORAGE_KEYS.savedModels, savedModels);
     }, [savedModels]);
     useEffect(() => {
         if (openRouterModelsList.length > 0) {
-            safeSessionStorageSet('ellipsisprose_openrouter_models_cache', openRouterModelsList);
+            safeSessionStorageSet(STORAGE_KEYS.openRouterModelsCache, openRouterModelsList);
         }
     }, [openRouterModelsList]);
     useEffect(() => {
         if (nanoGptModelsList.length > 0) {
-            safeSessionStorageSet('ellipsisprose_nanogpt_models_cache', nanoGptModelsList);
+            safeSessionStorageSet(STORAGE_KEYS.nanoGptModelsCache, nanoGptModelsList);
         }
     }, [nanoGptModelsList]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_use_prose_model', useProseModel);
+        safeLocalStorageSet(STORAGE_KEYS.useProseModel, useProseModel);
     }, [useProseModel]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_gemini_prose_model', geminiProseModel);
+        safeLocalStorageSet(STORAGE_KEYS.geminiProseModel, geminiProseModel);
     }, [geminiProseModel]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_openrouter_prose_model', openRouterProseModel);
+        safeLocalStorageSet(STORAGE_KEYS.openRouterProseModel, openRouterProseModel);
     }, [openRouterProseModel]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_kobold_prose_model', koboldProseModel);
+        safeLocalStorageSet(STORAGE_KEYS.koboldProseModel, koboldProseModel);
     }, [koboldProseModel]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_enable_thinking_act', enableThinkingAct);
+        safeLocalStorageSet(STORAGE_KEYS.enableThinkingAct, enableThinkingAct);
     }, [enableThinkingAct]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_enable_thinking_scene', enableThinkingScene);
+        safeLocalStorageSet(STORAGE_KEYS.enableThinkingScene, enableThinkingScene);
     }, [enableThinkingScene]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_enable_thinking_writing', enableThinkingWriting);
+        safeLocalStorageSet(STORAGE_KEYS.enableThinkingWriting, enableThinkingWriting);
     }, [enableThinkingWriting]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_thinking_budget_story_arc', thinkingBudgetStoryArc);
+        safeLocalStorageSet(STORAGE_KEYS.thinkingBudgetStoryArc, thinkingBudgetStoryArc);
     }, [thinkingBudgetStoryArc]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_thinking_budget_act', thinkingBudgetAct);
+        safeLocalStorageSet(STORAGE_KEYS.thinkingBudgetAct, thinkingBudgetAct);
     }, [thinkingBudgetAct]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_thinking_budget_scene', thinkingBudgetScene);
+        safeLocalStorageSet(STORAGE_KEYS.thinkingBudgetScene, thinkingBudgetScene);
     }, [thinkingBudgetScene]);
     useEffect(() => {
-        safeLocalStorageSet('ellipsisprose_thinking_budget_writing', thinkingBudgetWriting);
+        safeLocalStorageSet(STORAGE_KEYS.thinkingBudgetWriting, thinkingBudgetWriting);
     }, [thinkingBudgetWriting]);
 
     const getModelSettingsSnapshot = useCallback(
@@ -642,11 +686,13 @@ export function useModelCatalog({
             openRouterModel,
             nanoGptModel,
             codexModel,
+            claudeModel,
             koboldModel,
             koboldLoadedModel
         }),
         [
             apiProvider,
+            claudeModel,
             codexModel,
             devModel,
             devProvider,
@@ -694,7 +740,7 @@ export function useModelCatalog({
             setGeminiModelsList(models);
             if (imageModels.length > 0) {
                 setGeminiImageModelsList(imageModels);
-                safeSessionStorageSet('ellipsisprose_gemini_image_models_cache', imageModels);
+                safeSessionStorageSet(STORAGE_KEYS.geminiImageModelsCache, imageModels);
             }
         } catch (e) {
             console.error('Error fetching Gemini models:', e);
@@ -715,7 +761,7 @@ export function useModelCatalog({
                 const imgModels = await fetchGeminiImageModelsCatalog(keyToUse);
                 if (imgModels.length > 0) {
                     setGeminiImageModelsList(imgModels);
-                    safeSessionStorageSet('ellipsisprose_gemini_image_models_cache', imgModels);
+                    safeSessionStorageSet(STORAGE_KEYS.geminiImageModelsCache, imgModels);
                     if (showFeedback) {
                         stableShowToast(
                             `Loaded ${imgModels.length} Gemini image models on the fly!`,
@@ -744,9 +790,9 @@ export function useModelCatalog({
             const models = await fetchOpenRouterModels(openRouterKey);
             if (models && models.length > 0) {
                 setOpenRouterModelsList(models);
-                safeSessionStorageSet('ellipsisprose_openrouter_models_cache', models);
+                safeSessionStorageSet(STORAGE_KEYS.openRouterModelsCache, models);
                 try {
-                    localStorage.removeItem('ellipsisprose_openrouter_models_cache');
+                    localStorage.removeItem(STORAGE_KEYS.openRouterModelsCache);
                 } catch {
                     // Ignore storage quota / privacy errors
                 }
@@ -761,9 +807,9 @@ export function useModelCatalog({
             const models = await fetchNanoGPTModels(nanoGptKey);
             if (models && models.length > 0) {
                 setNanoGptModelsList([...models]);
-                safeSessionStorageSet('ellipsisprose_nanogpt_models_cache', models);
+                safeSessionStorageSet(STORAGE_KEYS.nanoGptModelsCache, models);
                 try {
-                    localStorage.removeItem('ellipsisprose_nanogpt_models_cache');
+                    localStorage.removeItem(STORAGE_KEYS.nanoGptModelsCache);
                 } catch {
                     // Ignore storage quota / privacy errors
                 }
@@ -807,6 +853,16 @@ export function useModelCatalog({
         setCodexStatus(result.status);
     }, [codexUrl]);
 
+    const refreshClaudeModels = useCallback(async (): Promise<void> => {
+        const refreshId = ++claudeRefreshId.current;
+        setClaudeStatus({ online: false, model: null, error: null });
+        setClaudeModelsList([]);
+        const result = await fetchClaudeCatalog(claudeUrl);
+        if (refreshId !== claudeRefreshId.current) return;
+        setClaudeModelsList(result.models);
+        setClaudeStatus(result.status);
+    }, [claudeUrl]);
+
     const refreshComfyInfo = useCallback(async (): Promise<void> => {
         const refreshId = ++comfyRefreshId.current;
         setComfyStatus({
@@ -847,6 +903,8 @@ export function useModelCatalog({
                 await refreshNanoGptModels();
             } else if (prov === 'codex') {
                 await refreshCodexModels();
+            } else if (prov === 'claude') {
+                await refreshClaudeModels();
             } else if (prov === 'koboldcpp') {
                 await checkKoboldStatus();
             }
@@ -857,6 +915,7 @@ export function useModelCatalog({
             devProvider,
             fetchGeminiImageModels,
             fetchGeminiModels,
+            refreshClaudeModels,
             refreshCodexModels,
             refreshNanoGptModels,
             refreshOpenRouterModels
@@ -894,10 +953,14 @@ export function useModelCatalog({
             if (activeProviders.has('codex') || embeddingProvider === 'codex') {
                 void refreshCodexModels();
             }
+            if (activeProviders.has('claude')) {
+                void refreshClaudeModels();
+            }
             if (imageProvider === 'comfyui') void refreshComfyInfo();
         }
         return () => {
             codexRefreshId.current++;
+            claudeRefreshId.current++;
             currentComfyRef.current++;
         };
     }, [
@@ -913,6 +976,7 @@ export function useModelCatalog({
         nanoGptKey,
         koboldUrl,
         codexUrl,
+        claudeUrl,
         imageProvider,
         comfyUrl,
         geminiModelsList.length,
@@ -926,6 +990,7 @@ export function useModelCatalog({
         refreshNanoGptModels,
         checkKoboldStatus,
         refreshCodexModels,
+        refreshClaudeModels,
         refreshComfyInfo
     ]);
 
@@ -1003,6 +1068,7 @@ export function useModelCatalog({
                         openRouterModel,
                         nanoGptModel,
                         codexModel,
+                        claudeModel,
                         koboldModel,
                         koboldLoadedModel
                     },
@@ -1020,6 +1086,7 @@ export function useModelCatalog({
                     nanoGptKey,
                     koboldUrl,
                     codexUrl,
+                    claudeUrl,
                     openRouterMaxTokens,
                     apiTimeout,
                     activeStory: (activeStory || null) as {
@@ -1040,6 +1107,8 @@ export function useModelCatalog({
             apiKey,
             apiProvider,
             apiTimeout,
+            claudeModel,
+            claudeUrl,
             codexModel,
             codexUrl,
             devModel,
@@ -1116,6 +1185,12 @@ export function useModelCatalog({
         codexModelsList,
         codexStatus,
         codexEmbeddingStatus,
+        claudeUrl,
+        setClaudeUrl,
+        claudeModel,
+        setClaudeModel,
+        claudeModelsList,
+        claudeStatus,
         savedModels,
         setSavedModels,
         openRouterModelsList,
@@ -1194,6 +1269,7 @@ export function useModelCatalog({
         refreshNanoGptModels,
         checkKoboldStatus,
         refreshCodexModels,
+        refreshClaudeModels,
         refreshComfyInfo,
         handleCatalogRefresh,
         callAI

@@ -4,6 +4,7 @@
  * Tier 0.2 Staggered Character Interviews, and Tier 1.1 Story Arc seeding.
  */
 
+import { STORAGE_KEYS } from '@/config';
 import {
     cleanCharacterNameFromVoiceProfile,
     extractPersonalizedReferenceTextFromInterview,
@@ -36,7 +37,7 @@ import {
 } from '@/domain/story';
 import { PROMPTS } from '@/prompts';
 import { logStore, storyStore } from '@/services/storage';
-import type { CastMember, LoreItem, Story } from '@/types';
+import { isLocalProvider, type CastMember, type LoreItem, type Story } from '@/types';
 import {
     decodeXmlEntities,
     extractAllTags,
@@ -1077,8 +1078,7 @@ BEGIN DEVELOPING CONCEPTUAL FOUNDATION`;
             `Character Development (Tier 0.2: 0/${startingCast.length} complete)...`
         );
         const proseConfig = ctx.getEffectiveModelConfig('prose');
-        const isLocalProseEndpoint =
-            proseConfig?.provider === 'koboldcpp' || proseConfig?.provider === 'codex';
+        const isLocalProseEndpoint = isLocalProvider(proseConfig?.provider);
 
         let completedInterviews = 0;
         const executeInterviewForChar = async (
@@ -1506,7 +1506,7 @@ BEGIN STORY ARC CRITIQUE REVIEW
         const embService = ctx.getEmbeddingService();
         if (isActiveStoryForRag && embService?.isConfigured()) {
             safeLocalStorageSet(
-                'ellipsisprose_rag_fingerprint',
+                STORAGE_KEYS.ragFingerprint,
                 computeLoreFingerprint(
                     activeStoryId,
                     finalLore as LoreItem[],
