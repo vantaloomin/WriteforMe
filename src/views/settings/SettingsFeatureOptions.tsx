@@ -27,6 +27,11 @@ const TOGGLES: Array<{ key: BooleanOption; title: string; help: string }> = [
         help: 'Before a scene is written, the last six scenes are read in code for wording used in three or more of them, and the writer is told not to use it again. No extra model call.'
     },
     {
+        key: 'deadCharacterCheck',
+        title: 'Dead Character Check',
+        help: 'After a scene is written, it is read in code for the name of anyone the story holds dead. Only if one is named, and the scene\u2019s plan did not ask for them, one extra call checks the paragraphs that name them and rewrites any sentence that has them alive. A scene that names no one dead costs nothing.'
+    },
+    {
         key: 'reviewNewLore',
         title: 'Review New Lore',
         help: 'While writing, the model picks up new world facts and adds them to the story\u2019s lore by itself. With this on, each new fact waits on the Lore page until you approve or dismiss it. A fact that is waiting is not used in later scenes.'
