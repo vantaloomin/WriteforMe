@@ -10,7 +10,7 @@
 import { useEffect, useRef } from 'react';
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
 import { DEFAULT_SERVICE_URLS, TIMEOUTS_MS } from '@/config';
-import { isModelStop, resetUsageMeter, resumeModelCalls, stopModelCalls } from '@/services/llm';
+import { isLocalKoboldUrl, isModelStop, resetUsageMeter, resumeModelCalls, stopModelCalls } from '@/services/llm';
 
 type Setter<T> = Dispatch<SetStateAction<T>>;
 
@@ -74,6 +74,17 @@ export function useAutopilotControl<TPrefetch = unknown>({
 /** Checks that a local KoboldCPP server answers before a long run starts against it. */
 export async function isKoboldReachable(koboldUrl: string | null | undefined): Promise<boolean> {
     const targetUrl = normalizeKoboldUrl(koboldUrl);
+    if (isLocalKoboldUrl(targetUrl) && typeof window !== 'undefined') {
+        const bridge = window.ellipsisDesktopBackends;
+        if (bridge?.acquireGpuLease && bridge?.releaseGpuLease) {
+            const lease = await bridge.acquireGpuLease('llm', { koboldUrl: targetUrl }).catch(() => null);
+            if (lease?.ok && lease.value?.leaseId) {
+                await bridge.releaseGpuLease(lease.value.leaseId).catch(() => {});
+            }
+        } else if (bridge?.ensureKoboldRunning) {
+            await bridge.ensureKoboldRunning().catch(() => {});
+        }
+    }
     try {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), TIMEOUTS_MS.koboldPreflight);
