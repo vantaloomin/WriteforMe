@@ -584,6 +584,8 @@ import {
                 inputCustomWords, setInputCustomWords,
                 inputSeriesOpener, setInputSeriesOpener,
                 inputSeriesTitle, setInputSeriesTitle,
+                inputSerial, setInputSerial,
+                inputSerialRotation, setInputSerialRotation,
                 resetSetupDraftFields
             } = useSetupDraft();
             // World-building document import: Setup drafts and post-generation lore (Phase 6E-3).
@@ -1106,6 +1108,8 @@ import {
                     inputCustomWords,
                     inputSeriesOpener,
                     inputSeriesTitle,
+                    inputSerial,
+                    inputSerialRotation,
                     importedLoreText
                 }),
                 clearSetupDraft,
@@ -1962,6 +1966,10 @@ import {
                                     setInputSeriesOpener={setInputSeriesOpener}
                                     inputSeriesTitle={inputSeriesTitle}
                                     setInputSeriesTitle={setInputSeriesTitle}
+                                    inputSerial={inputSerial}
+                                    setInputSerial={setInputSerial}
+                                    inputSerialRotation={inputSerialRotation}
+                                    setInputSerialRotation={setInputSerialRotation}
                                     inputWritingMode={inputWritingMode}
                                     setInputWritingMode={handOff(setInputWritingMode)}
                                     archetypeOptions={archetypeOptions}
