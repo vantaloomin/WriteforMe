@@ -20,6 +20,7 @@ import {
 } from '@/components';
 
 import { LoreProposalsPanel } from './LoreProposalsPanel';
+import { WorldBuilderPanel, type WorldBuilderPanelProps } from './WorldBuilderPanel';
 
 export interface LoreItemRecord extends LoreEntryItem {
     id?: string;
@@ -72,6 +73,8 @@ export interface LoreViewProps {
     handlePostGenLoreImport: (files: File[]) => void | Promise<void>;
     /** Brings in a lorebook from another app. The button is hidden when this is not given. */
     handleLorebookImport?: (file: File) => void | Promise<void>;
+    /** Builds a world from a pitch into lore proposals. The panel is hidden when this is not given. */
+    buildWorld?: WorldBuilderPanelProps['buildWorld'];
     ingestLore: (item: LoreItemRecord) => Promise<LoreItemRecord | null | undefined>;
     handleDeleteLore: (index: number) => void | Promise<void>;
     openEditModal: (title: string, currentVal: string, onSave: (val: string) => void) => void;
@@ -103,6 +106,7 @@ export function LoreView({
     rebuildRagIndex,
     handlePostGenLoreImport,
     handleLorebookImport,
+    buildWorld,
     ingestLore,
     handleDeleteLore,
     openEditModal,
@@ -288,6 +292,8 @@ export function LoreView({
                     </button>
                 </div>
             </div>
+
+            {buildWorld && <WorldBuilderPanel buildWorld={buildWorld} showToast={showToast} />}
 
             <LoreProposalsPanel
                 story={story}
