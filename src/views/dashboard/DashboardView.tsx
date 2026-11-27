@@ -6,6 +6,7 @@
  * and Canonical Continuity Ledger.
  */
 
+import { ContentDialPanel } from './ContentDialPanel';
 import {
     CollapsibleProse,
     Book,
@@ -483,6 +484,8 @@ export function DashboardView({
                                 html={parseMarkdown(story.author_note || "No author's note set. Click edit to add global creative direction.")}
                             />
                         </div>
+
+                        <ContentDialPanel story={story} setStory={(updater) => setStory(updater)} />
 
                         {/* Status Quo */}
                         {story.status_quo && (
