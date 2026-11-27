@@ -3,7 +3,9 @@
  * Incremental running-synopsis updater synthesized from drafted scenes.
  */
 
+import { formatSeriesThreadStatus } from '@/domain/series';
 import { PROMPTS } from '@/prompts';
+import type { Story } from '@/types';
 import { decodeXmlEntities } from '@/utils';
 import {
     asArray,
@@ -89,7 +91,7 @@ ${draftedScenes.join('\n')}
 <existing_story_so_far>
 ${asString(currentStory.story_so_far) || 'None.'}
 </existing_story_so_far>
-`;
+${formatSeriesThreadStatus(currentStory as Partial<Story>).trimEnd()}`;
         const res = await runAgentWithEscalation<{ story_so_far: string }>(ctx, {
             tierName: 'Story So Far Agent',
             isAutopilot,
