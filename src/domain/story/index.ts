@@ -13,3 +13,4 @@ export * from './sceneEditing';
 export * from './customNarrativeModes';
 export * from './logDetail';
 export * from './outlineExpansion';
+export * from './restorePoints';
