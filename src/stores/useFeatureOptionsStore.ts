@@ -7,6 +7,12 @@
 
 import { create } from 'zustand';
 import { STORAGE_KEYS } from '@/config';
+import {
+    cleanSpendCap,
+    cleanTokenCapK,
+    isAutopilotPauseAt,
+    type AutopilotPauseAt
+} from '@/domain/autopilot/limits';
 import { readStorageJson, writeStorageValue } from './storageHelpers';
 
 export interface FeatureOptions {
@@ -16,12 +22,21 @@ export interface FeatureOptions {
     summaryCheck: boolean;
     /** Tell the writer which phrases the last few scenes keep reusing, so it stops. */
     phraseHabitWatch: boolean;
+    /** Where Autopilot pauses by itself: 'never', 'scene', 'sequence' or 'act'. */
+    autopilotPauseAt: AutopilotPauseAt;
+    /** Thousands of tokens one Autopilot run may use; 0 means no cap. */
+    autopilotTokenCap: number;
+    /** Dollars one Autopilot run may spend, where the provider reports spending; 0 means no cap. */
+    autopilotSpendCap: number;
 }
 
 export const DEFAULT_FEATURE_OPTIONS: FeatureOptions = {
     secretLeakCheck: true,
     summaryCheck: true,
-    phraseHabitWatch: true
+    phraseHabitWatch: true,
+    autopilotPauseAt: 'never',
+    autopilotTokenCap: 0,
+    autopilotSpendCap: 0
 };
 
 export function normalizeFeatureOptions(raw: unknown): FeatureOptions {
@@ -33,6 +48,9 @@ export function normalizeFeatureOptions(raw: unknown): FeatureOptions {
             (next as unknown as Record<string, unknown>)[key] = source[key];
         }
     });
+    if (!isAutopilotPauseAt(next.autopilotPauseAt)) next.autopilotPauseAt = 'never';
+    next.autopilotTokenCap = cleanTokenCapK(next.autopilotTokenCap);
+    next.autopilotSpendCap = cleanSpendCap(next.autopilotSpendCap);
     return next;
 }
 
