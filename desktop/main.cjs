@@ -421,6 +421,9 @@ function registerIpc() {
             })
         )
     ));
+    ipcMain.handle('backends:launchComfy', guard(() =>
+        controller.ensureComfyRunning(() => pushState(), () => {}, { explicit: true })
+    ));
     ipcMain.handle('backends:openWindow', guard(() => { openBackendsWindow(); }));
     ipcMain.handle('backends:embeddingStatus', guard((modelId) => controller.embedding.status(modelId)));
     ipcMain.handle('backends:embeddingEnsure', guard(async (modelId) => { await controller.embedding.ensure(modelId); return controller.embedding.status(modelId); }));
