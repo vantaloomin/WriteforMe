@@ -12,10 +12,13 @@ import { readStorageJson, writeStorageValue } from './storageHelpers';
 export interface FeatureOptions {
     /** After a scene is written, one extra call reads it for unrevealed secrets told in other words. */
     secretLeakCheck: boolean;
+    /** A rewritten "story so far" must keep the names, numbers and quotes the one before it held. */
+    summaryCheck: boolean;
 }
 
 export const DEFAULT_FEATURE_OPTIONS: FeatureOptions = {
-    secretLeakCheck: true
+    secretLeakCheck: true,
+    summaryCheck: true
 };
 
 export function normalizeFeatureOptions(raw: unknown): FeatureOptions {

@@ -14,6 +14,11 @@ const TOGGLES: Array<{ key: BooleanOption; title: string; help: string }> = [
         key: 'secretLeakCheck',
         title: 'Secret Leak Check',
         help: 'After a scene is written, one extra call reads it for a secret told before its planned reveal, and rewrites only the passages that give it away. Runs only while the story has unrevealed secrets. Adds a call per scene.'
+    },
+    {
+        key: 'summaryCheck',
+        title: 'Story So Far Check',
+        help: 'Before a rewritten "story so far" replaces the old one, checks that every name, number and quote it held is still there. A draft that drops one is asked again once, and anything still missing is added back word for word.'
     }
 ];
 
