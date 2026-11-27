@@ -87,6 +87,10 @@ export interface SettingsModelsTabProps {
     setNanoGptKey: (key: string) => void;
     nanoGptModel: string;
     setNanoGptModel: (model: string) => void;
+    anthropicKey: string;
+    setAnthropicKey: (key: string) => void;
+    anthropicModel: string;
+    setAnthropicModel: (model: string) => void;
     koboldUrl: string;
     setKoboldUrl: (url: string) => void;
     koboldModel: string;

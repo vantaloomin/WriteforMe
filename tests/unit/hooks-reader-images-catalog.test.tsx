@@ -12,6 +12,7 @@ import * as llmModule from '@/services/llm';
 import type { OpenRouterCatalogModel, GeminiImageModelInfo } from '@/services/llm';
 import type { ComfyOptionsCatalog, ComfyStatusInfo } from '@/services/images';
 import type { ImageStore } from '@/services/storage';
+import type { ModelDescriptor } from '@/types';
 
 interface MountedHook<T> {
     current: T;
@@ -76,6 +77,7 @@ describe('hooks Phase 6E-1 (useReaderController, useStoryImages, useModelCatalog
     it('useModelSearch debounces query and filters OpenRouter catalog', async () => {
         const emptyGeminiList: string[] = [];
         const emptyNanoList: NanoGptCatalogEntry[] = [];
+        const emptyAnthropicList: ModelDescriptor[] = [];
         const fetchGeminiModels = vi.fn(async () => undefined);
         const openRouterCatalog: OpenRouterCatalogModel[] = [
             {
@@ -109,6 +111,7 @@ describe('hooks Phase 6E-1 (useReaderController, useStoryImages, useModelCatalog
                 geminiModelsList: emptyGeminiList,
                 openRouterModelsList: openRouterCatalog,
                 nanoGptModelsList: emptyNanoList,
+                anthropicModelsList: emptyAnthropicList,
                 fetchGeminiModels
             })
         );
