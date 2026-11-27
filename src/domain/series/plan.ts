@@ -319,3 +319,21 @@ export function parseSeriesPlan(text: string, ctx: ParseSeriesPlanContext): Pars
     };
     return { plan, threads, parsed };
 }
+
+/**
+ * Library badge text for a book of a series, such as `Book 2 of 3`. The total is the highest
+ * book number among the stories given, so it grows as later books are started. Returns '' for a
+ * standalone story.
+ */
+export function seriesBadgeLabel(
+    story: Partial<Story> | null | undefined,
+    allStories: Array<Partial<Story> | null | undefined> = []
+): string {
+    if (!isSeriesStory(story)) return '';
+    const id = story.series.id;
+    const total = allStories.reduce((max, other) => {
+        if (!isSeriesStory(other) || other.series.id !== id) return max;
+        return Math.max(max, other.series.book_number);
+    }, story.series.book_number);
+    return total > 1 ? `Book ${story.series.book_number} of ${total}` : `Book ${story.series.book_number}`;
+}

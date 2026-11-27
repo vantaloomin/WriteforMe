@@ -55,6 +55,7 @@ import {
     generateCharacterProfile as orchestrateGenerateCharacterProfile,
     runAgentWithEscalation as orchestrateRunAgentWithEscalation,
     initStory as orchestrateInitStory,
+    startNextBook as orchestrateStartNextBook,
     generateStoryArc as orchestrateGenerateStoryArc,
     generateActsAndSequences as orchestrateGenerateActsAndSequences,
     generateSequences as orchestrateGenerateSequences,
@@ -1309,6 +1310,8 @@ import {
 
 
             const initStory = (isAutopilotOrEvent: CtxArgs<typeof orchestrateInitStory>[0] = false, options: CtxArgs<typeof orchestrateInitStory>[1] = {}) => orchestrateInitStory(getPipelineCtx(), isAutopilotOrEvent, options);
+            // Book series: creates the next book from the active story and builds its bible.
+            const startNextBook = (input: CtxArgs<typeof orchestrateStartNextBook>[0]) => orchestrateStartNextBook(getPipelineCtx(), input);
 
             // ============================================================================
             // TIER 1.1: STORY ARC PLANNER & TIER 1.2: STORY ARC REVIEWER
@@ -2018,6 +2021,7 @@ import {
                                     handleResetStoryStage={handleResetStoryStage}
                                     initStory={handOff(initStory)}
                                     generateStoryArc={handOff(generateStoryArc)}
+                                    startNextBook={startNextBook}
                                     epistemicViewTab={epistemicViewTab}
                                     setEpistemicViewTab={setEpistemicViewTab}
                                     epistemicScrubberCoord={epistemicScrubberCoord}
