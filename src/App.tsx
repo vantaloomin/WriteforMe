@@ -1799,11 +1799,8 @@ import {
                         loading={loading}
                         continuousAutopilot={continuousAutopilot}
                         isAudioAutopilotRunning={isAudioAutopilotRunning}
-                        isAudioAutopilotQueued={isAudioAutopilotQueued}
                         storyAudioSummary={handOff(storyAudioSummary)}
                         refreshLibrary={refreshLibrary}
-                        handleAutopilot={handleAutopilot}
-                        handleToggleAudioAutopilot={handleToggleAudioAutopilot}
                         enterReaderMode={enterReaderMode}
                         getSceneProseText={getSceneProseText}
                         getSceneAudioStatus={handOff(getSceneAudioStatus)}
