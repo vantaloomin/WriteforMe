@@ -1,3 +1,4 @@
+export * from './BackToTop';
 export * from './BufferedTextarea';
 export * from './CollapsibleProse';
 export * from './FoldedSection';
