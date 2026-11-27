@@ -91,6 +91,7 @@ import { getCharacterDetails, runArchivistForScene } from './continuityPipeline'
 import { DIRECTIVE_REVIEW_OUTPUT_FORMAT_SCHEMA } from './directiveReview';
 import { runAgentWithEscalation } from './escalation';
 import { gatherCharacterLines } from './characterLines';
+import { checkSceneForTheDead } from './deadCheck';
 import { buildProseContext, type ProseContextCastMember } from './proseContext';
 import { markRestorePoint } from './restorePoint';
 import { generateScenes } from './sceneBlueprints';
@@ -1973,6 +1974,34 @@ Refine and elevate this scene draft according to your editorial mandates. Preser
                         'warning'
                     );
                 }
+            }
+        }
+
+        // DEAD CHARACTER CHECK: in code first; a model call only when the scene names the dead.
+        if (finalProseText) {
+            const deadLabel = `Dead Character Check (Sequence ${seq + 1}, Scene ${s + 1})`;
+            const deadCheck = await checkSceneForTheDead(ctx, {
+                story: storyToUse as never,
+                scene,
+                prose: finalProseText,
+                label: deadLabel
+            });
+            if (deadCheck.named.length > 0) {
+                finalProseText = deadCheck.prose;
+                const fixedAll = deadCheck.rewritten > 0;
+                ctx.logPipelineValidation(
+                    deadLabel,
+                    true,
+                    [`Named in ${deadCheck.flagged} paragraph(s): ${deadCheck.named.join(', ')}`],
+                    null,
+                    {
+                        tierName: 'Dead Character Check',
+                        type: 'dead_character',
+                        actionTaken: fixedAll
+                            ? `Rewrote ${deadCheck.rewritten} paragraph(s) that had the dead alive.`
+                            : 'The paragraphs agree with the record, or could not be rewritten; the scene is kept as written.'
+                    }
+                );
             }
         }
 

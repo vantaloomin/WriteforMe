@@ -24,6 +24,7 @@ import {
 import { cardToCastMember } from '@/domain/imports';
 import { openCardFile } from '@/services/documents';
 import { CastBoardPanel } from './CastBoardPanel';
+import { DeadRecordPanel } from './DeadRecordPanel';
 
 export type CastCharacterRecord = CharacterCardCharacter & {
     name: string;
@@ -298,6 +299,7 @@ export function CastView({
             </div>
 
             <CastBoardPanel story={story} setStory={(updater) => setStory(updater)} />
+            <DeadRecordPanel story={story} setStory={(updater) => setStory(updater)} />
 
             {/* Cast Cards Grid */}
             <div className="flex flex-col gap-6">
