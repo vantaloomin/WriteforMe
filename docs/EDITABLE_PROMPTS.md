@@ -9,7 +9,8 @@ structure, writing and revision, continuity and lore, the Editorial Desk, and bo
   write, and the app reads replies by them. A wording that drops one is not saved, and the message names what is
   missing. The tags and fields to keep are listed under the edit box. An empty prompt is refused too.
 - **Edits survive updates.** Your wording is stored apart from the shipped one (browser storage key
-  `ellipsisprose_prompt_overrides_v1`), with a copy of the default it replaced.
+  `ellipsisprose_prompt_overrides_v1`), with a fingerprint of the default it replaced. With the local server or the
+  desktop app it is saved to disk with the other settings.
 - **"New default" flag.** When an update changes a default you have reworded, yours stays in use and the prompt is
   flagged, with **Show default** to compare.
 - **"Not in use" flag.** If an update's new default needs a tag your wording lacks, the default is used until you
@@ -36,7 +37,7 @@ to drop, and the edit box lists no tags.
 | List, checks, apply | `src/prompts/overrides.ts` |
 | Storage and state | `src/hooks/usePromptOverrides.ts` |
 | Settings tab | `src/views/settings/SettingsPromptsTab.tsx` |
-| Applied at startup | `src/main.tsx` |
+| Applied at startup | `hydrateAllStoresFromStorage` in `src/stores/index.ts` |
 
 `applyPromptOverrides` writes the wording in use into the live registry objects, which pipeline code reads at call
 time. With no overrides the registry is byte-identical to the shipped prompts, which a unit test asserts.

@@ -20,8 +20,8 @@ import { STRUCTURE_PROMPTS } from './tiers/structure';
 
 export interface PromptOverride {
     text: string;
-    /** The shipped wording this replaced, so a later change to the default can be flagged. */
-    defaultText: string;
+    /** A fingerprint of the shipped wording this replaced, so a later change to the default can be flagged. */
+    defaultHash: string;
     updatedAt: number;
 }
 
@@ -46,6 +46,20 @@ export interface EditablePromptView {
 }
 
 type PromptTable = Record<string, string>;
+
+/** A short fingerprint of a wording. Storing it, not the whole default, keeps saved settings small. */
+export function promptFingerprint(text: string): string {
+    let h1 = 0xdeadbeef;
+    let h2 = 0x41c6ce57;
+    for (let i = 0; i < text.length; i++) {
+        const ch = text.charCodeAt(i);
+        h1 = Math.imul(h1 ^ ch, 2654435761);
+        h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return `${text.length}:${(h2 >>> 0).toString(36)}${(h1 >>> 0).toString(36)}`;
+}
 
 const GROUPS: Array<[string, PromptTable]> = [
     ['Concept and cast', CONCEPT_PROMPTS as PromptTable],
@@ -179,7 +193,7 @@ export function viewPrompt(key: string, overrides: PromptOverrides): EditablePro
         text: saved ? saved.text : entry.default,
         default: entry.default,
         customized: Boolean(saved),
-        outdated: Boolean(saved && saved.defaultText !== entry.default),
+        outdated: Boolean(saved && saved.defaultHash !== promptFingerprint(entry.default)),
         problem,
         requiredTags: requiredTagsOf(entry.default),
         requiredFields: requiredFieldsOf(entry.default)
@@ -200,7 +214,7 @@ export function savePromptOverride(overrides: PromptOverrides, key: string, word
     if (problem) return { ok: false, error: problem };
     const next = { ...overrides };
     if (wording === entry.default) delete next[key];
-    else next[key] = { text: wording, defaultText: entry.default, updatedAt: now };
+    else next[key] = { text: wording, defaultHash: promptFingerprint(entry.default), updatedAt: now };
     return { ok: true, overrides: next };
 }
 
@@ -227,7 +241,7 @@ export function parsePromptOverrides(raw: unknown): PromptOverrides {
         if (!ENTRIES.has(key) || !row || typeof row.text !== 'string' || !row.text.trim()) return;
         found[key] = {
             text: row.text,
-            defaultText: typeof row.defaultText === 'string' ? row.defaultText : '',
+            defaultHash: typeof row.defaultHash === 'string' ? row.defaultHash : '',
             updatedAt: Number(row.updatedAt) || 0
         };
     });

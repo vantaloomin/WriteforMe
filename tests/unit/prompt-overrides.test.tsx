@@ -15,6 +15,7 @@ import {
     type PromptOverrides
 } from '@/prompts/overrides';
 import { PROMPT_OVERRIDES_STORAGE_KEY } from '@/hooks';
+import { hydrateAllStoresFromStorage } from '@/stores';
 import { SettingsPromptsTab } from '@/views/settings/SettingsPromptsTab';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -133,7 +134,7 @@ describe('editable prompts: saving and applying', () => {
     });
 
     it('keeps a wording through a changed default and flags it', () => {
-        const stored = { archivist: { text: `${DEFAULTS.archivist}\nMine.`, defaultText: 'the old shipped wording', updatedAt: 5 } };
+        const stored = { archivist: { text: `${DEFAULTS.archivist}\nMine.`, defaultHash: 'old', updatedAt: 5 } };
         const view = viewPrompt('archivist', stored)!;
         expect(view.outdated).toBe(true);
         expect(view.problem).toBeNull();
@@ -142,15 +143,29 @@ describe('editable prompts: saving and applying', () => {
     });
 
     it('falls back to the default when a stored wording no longer has a tag the new default needs', () => {
-        const stored = { entityNameRepair: { text: 'Just pick better names.', defaultText: 'old', updatedAt: 5 } };
+        const stored = { entityNameRepair: { text: 'Just pick better names.', defaultHash: 'old', updatedAt: 5 } };
         const view = viewPrompt('entityNameRepair', stored)!;
         expect(view.problem).toMatch(/Keep these tags/);
         applyPromptOverrides(stored);
         expect(PROMPTS.entityNameRepair).toBe(DEFAULTS.entityNameRepair);
     });
 
+    it('applies stored overrides when the stores hydrate, after the disk vault filled storage', () => {
+        const wording = `${DEFAULTS.archivist}\nFrom disk.`;
+        localStorage.setItem(PROMPT_OVERRIDES_STORAGE_KEY, JSON.stringify(mustSave({}, 'archivist', wording)));
+        expect(PROMPTS.archivist).toBe(DEFAULTS.archivist);
+        hydrateAllStoresFromStorage();
+        expect(PROMPTS.archivist).toBe(wording);
+    });
+
+    it('stores a fingerprint of the default, not the whole text', () => {
+        const overrides = mustSave({}, 'archivist', `${DEFAULTS.archivist}\nMine.`);
+        expect(overrides.archivist.defaultHash.length).toBeLessThan(40);
+        expect(viewPrompt('archivist', overrides)?.outdated).toBe(false);
+    });
+
     it('reads stored overrides and drops junk', () => {
-        const good = { archivist: { text: 'x <a></a>', defaultText: 'd', updatedAt: 3 } };
+        const good = { archivist: { text: 'x <a></a>', defaultHash: 'd', updatedAt: 3 } };
         expect(parsePromptOverrides(JSON.stringify({ ...good, nope: { text: 'y' }, storyArc: { text: '' }, actAgent: 7 }))).toEqual(good);
         expect(parsePromptOverrides('not json')).toEqual({});
         expect(parsePromptOverrides(null)).toEqual({});
