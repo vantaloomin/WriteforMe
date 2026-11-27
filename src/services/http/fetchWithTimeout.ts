@@ -7,6 +7,12 @@ import { TIMEOUTS_MS } from '@/config';
 
 export type FetchTimeoutOptions = RequestInit;
 
+/** The caller's own reason for aborting, when its signal (not the deadline) ended the request. */
+function callerAbortReason(signal: AbortSignal | null | undefined): Error | null {
+    if (!signal || !signal.aborted) return null;
+    return signal.reason instanceof Error ? signal.reason : null;
+}
+
 /** Executes `fetch` with a deadline across both connection setup and response body consumption. */
 export async function fetchWithTimeout(
     url: RequestInfo | URL,
@@ -59,6 +65,8 @@ export async function fetchWithTimeout(
                     return result;
                 } catch (err) {
                     clearTimeout(id);
+                    const callerReason = callerAbortReason(options.signal);
+                    if (callerReason) throw callerReason;
                     if (
                         (err instanceof Error && err.name === 'AbortError') ||
                         controller.signal.aborted
@@ -81,6 +89,8 @@ export async function fetchWithTimeout(
         return response;
     } catch (error) {
         clearTimeout(id);
+        const callerReason = callerAbortReason(options.signal);
+        if (callerReason) throw callerReason;
         if (
             (error instanceof Error && error.name === 'AbortError') ||
             controller.signal.aborted

@@ -4,6 +4,7 @@
  * Tier 0.2 Staggered Character Interviews, and Tier 1.1 Story Arc seeding.
  */
 
+import { isModelStop } from '@/services/llm';
 import { STORAGE_KEYS } from '@/config';
 import {
     cleanCharacterNameFromVoiceProfile,
@@ -1686,6 +1687,8 @@ BEGIN STORY ARC CRITIQUE REVIEW
         }
         return finalStory;
     } catch (e) {
+        // A Stop press is not a failure: leave quietly.
+        if (isModelStop(e)) throw e;
         const msg = extractErrorMessage(e);
         console.error('[initStory] FAILURE: Initialization failed with error:', e);
         if (!isAutopilot) {
