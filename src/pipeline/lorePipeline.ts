@@ -20,7 +20,9 @@ import {
     normalizeLoreRelations,
     partitionLoreIntoSemanticSections
 } from '@/domain/lore';
+import { queueLoreProposals } from '@/domain/lore/proposals';
 import { PROMPTS } from '@/prompts';
+import { getFeatureOptions } from '@/stores';
 import { storyStore } from '@/services/storage';
 import type { LoreItem } from '@/types';
 import { extractAllTags, extractTag, safeLocalStorageSet } from '@/utils';
@@ -648,6 +650,26 @@ export async function handleWorldUpdates(
         console.warn('[handleWorldUpdates] GESM commit warning:', gesmCommitErr);
     }
 
+    // Review mode: new lore waits for the author instead of going into the story and the index.
+    let heldLore: Array<{ topic?: string; detail?: string }> = [];
+    if (getFeatureOptions().reviewNewLore && updates.lore_updates && updates.lore_updates.length > 0) {
+        heldLore = updates.lore_updates;
+        updates = { ...updates, lore_updates: [] };
+    }
+    const holdLore = <T extends PipelineStory | null>(result: T): T => {
+        if (!result || heldLore.length === 0) return result;
+        return queueLoreProposals(result, heldLore, { act: activeActNum, scene: activeSceneNum }).story as T;
+    };
+    if (heldLore.length > 0) {
+        const waiting = queueLoreProposals(ctx.getStory() || targetStory || {}, heldLore).added;
+        if (waiting > 0) {
+            ctx.showToast(
+                `${waiting} new lore item${waiting === 1 ? ' is' : 's are'} waiting for your review on the Lore page.`,
+                'info'
+            );
+        }
+    }
+
     const processedLoreStart: IngestedLoreResult[] = [];
     if (updates.lore_updates && updates.lore_updates.length > 0) {
         ctx.setRagStatus('indexing');
@@ -681,12 +703,14 @@ export async function handleWorldUpdates(
             ...(committedEpistemicGraph ? { epistemic_graph: committedEpistemicGraph } : {}),
             ...(committedSecretVault ? { secret_vault: committedSecretVault } : {})
         };
-        return applyWorldFn(
-            baseWithEpistemic as WorldUpdateStoryState,
-            updates,
-            processedLoreStart,
-            activeActNum,
-            activeSceneNum
+        return holdLore(
+            applyWorldFn(
+                baseWithEpistemic as WorldUpdateStoryState,
+                updates,
+                processedLoreStart,
+                activeActNum,
+                activeSceneNum
+            ) as PipelineStory | null
         );
     }
 
@@ -697,14 +721,16 @@ export async function handleWorldUpdates(
             ...(committedEpistemicGraph ? { epistemic_graph: committedEpistemicGraph } : {}),
             ...(committedSecretVault ? { secret_vault: committedSecretVault } : {})
         };
-        updatedResult = applyWorldFn(
-            baseWithEpistemic as WorldUpdateStoryState,
-            updates,
-            processedLoreStart,
-            activeActNum,
-            activeSceneNum
+        updatedResult = holdLore(
+            applyWorldFn(
+                baseWithEpistemic as WorldUpdateStoryState,
+                updates,
+                processedLoreStart,
+                activeActNum,
+                activeSceneNum
+            ) as PipelineStory | null
         );
-        return updatedResult;
+        return updatedResult as PipelineStory;
     });
     return updatedResult;
 }

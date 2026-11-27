@@ -27,6 +27,11 @@ const TOGGLES: Array<{ key: BooleanOption; title: string; help: string }> = [
         help: 'Before a scene is written, the last six scenes are read in code for wording used in three or more of them, and the writer is told not to use it again. No extra model call.'
     },
     {
+        key: 'reviewNewLore',
+        title: 'Review New Lore',
+        help: 'While writing, the model picks up new world facts and adds them to the story\u2019s lore by itself. With this on, each new fact waits on the Lore page until you approve or dismiss it. A fact that is waiting is not used in later scenes.'
+    },
+    {
         key: 'promptCacheMarks',
         title: 'Prompt Cache Marks',
         help: 'For Claude models (directly or through OpenRouter): marks where the repeated start of the scene-writing prompt ends, so the writer\u2019s later turns and rewrites of the same scene read it from cache at about a tenth of the price. A scene written in a single turn and never rewritten pays about a quarter more for that part instead. Other services cache by themselves and ignore this.'
