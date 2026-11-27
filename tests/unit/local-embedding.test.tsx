@@ -2,13 +2,15 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { STORAGE_KEYS } from '@/config';
-import { useLocalEmbeddingReindex } from '@/hooks';
+import { useLocalEmbeddingAvailable, useLocalEmbeddingReindex } from '@/hooks';
 import {
     EmbeddingService,
     getLocalEmbeddingModel,
     isLocalEmbeddingAvailable,
+    resetLocalEmbeddingProbe,
     setLocalEmbeddingModel
 } from '@/services/rag';
+import { resetVaultDetectorForTests } from '@/services/storage';
 import { SettingsLocalEmbedding } from '@/views/settings/SettingsLocalEmbedding';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -79,6 +81,9 @@ afterEach(() => {
     act(() => root.unmount());
     container.remove();
     delete window.ellipsisDesktopBackends;
+    resetLocalEmbeddingProbe();
+    resetVaultDetectorForTests();
+    vi.unstubAllGlobals();
     vi.useRealTimers();
     vi.restoreAllMocks();
 });
@@ -208,5 +213,61 @@ describe('useLocalEmbeddingReindex', () => {
         act(() => root.render(<Harness rebuild={rebuild} active={false} />));
         await flush();
         expect(bridge.ensureEmbedding).not.toHaveBeenCalled();
+    });
+});
+
+describe('built-in embeddings under the launcher (server.js)', () => {
+    function stubServer(available: boolean) {
+        const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+            if (url === '/api/storage/status') {
+                return new Response(JSON.stringify({ ok: true }), { headers: { 'content-type': 'application/json' } });
+            }
+            const body = JSON.parse(String(init?.body || '{}')) as { texts?: string[] };
+            const value = url.endsWith('/embed')
+                ? (body.texts || []).map(() => [4, 5])
+                : status({ available, state: 'ready' });
+            return new Response(JSON.stringify(available ? { ok: true, value } : { ok: false, available: false }));
+        });
+        vi.stubGlobal('fetch', fetchMock);
+        return fetchMock;
+    }
+
+    function Probe() {
+        return <span>{useLocalEmbeddingAvailable() ? 'offered' : 'hidden'}</span>;
+    }
+
+    it('offers the model once the page\'s own server says it can run it, and embeds through it', async () => {
+        const fetchMock = stubServer(true);
+        act(() => root.render(<Probe />));
+        expect(container.textContent).toBe('hidden');
+        for (let i = 0; i < 5; i++) await flush();
+        expect(container.textContent).toBe('offered');
+        expect(fetchMock.mock.calls.filter(([url]) => url === '/api/embedding/status')).toHaveLength(1);
+
+        const service = new EmbeddingService('', 'llamacpp');
+        expect(service.isConfigured()).toBe(true);
+        await expect(service.getEmbedding('who rules?', 'query')).resolves.toEqual([4, 5]);
+        const [url, init] = fetchMock.mock.calls.at(-1) as [string, RequestInit];
+        expect(url).toBe('/api/embedding/embed');
+        expect(JSON.parse(String(init.body))).toEqual({ model: 'embeddinggemma-2', texts: ['who rules?'], kind: 'query' });
+    });
+
+    it('stays hidden when the server cannot run it', async () => {
+        stubServer(false);
+        act(() => root.render(<Probe />));
+        for (let i = 0; i < 5; i++) await flush();
+        expect(container.textContent).toBe('hidden');
+        expect(new EmbeddingService('', 'llamacpp').isConfigured()).toBe(false);
+    });
+});
+
+describe('built-in embeddings on a static host', () => {
+    it('never asks for the route when no server.js vault answers', async () => {
+        const fetchMock = vi.fn(async (url: string) => new Response(`Not Found ${url}`, { status: 404 }));
+        vi.stubGlobal('fetch', fetchMock);
+        expect(isLocalEmbeddingAvailable()).toBe(false);
+        for (let i = 0; i < 5; i++) await flush();
+        expect(isLocalEmbeddingAvailable()).toBe(false);
+        expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/api/storage/status']);
     });
 });

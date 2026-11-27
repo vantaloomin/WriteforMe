@@ -11,6 +11,7 @@ import {
     getLocalEmbeddingStatus,
     isLocalEmbeddingAvailable,
     markLocalEmbeddingReady,
+    onLocalEmbeddingAvailabilityChange,
     onLocalEmbeddingModelChange,
     onLocalEmbeddingNeedsIndex,
     setLocalEmbeddingModel,
@@ -18,6 +19,11 @@ import {
 } from '@/services/rag';
 
 const POLL_MS = 1000;
+
+/** Whether this page can run the built-in model; turns true once the launcher's server answers. */
+export function useLocalEmbeddingAvailable(): boolean {
+    return useSyncExternalStore(onLocalEmbeddingAvailabilityChange, isLocalEmbeddingAvailable);
+}
 
 /** The chosen built-in model id; re-renders when Settings changes it. */
 export function useLocalEmbeddingModel(): string {
@@ -33,9 +39,10 @@ export function useLocalEmbeddingReindex(rebuild: () => unknown, active: boolean
     const modelId = useLocalEmbeddingModel();
     const rebuildRef = useRef(rebuild);
     rebuildRef.current = rebuild;
+    const available = useLocalEmbeddingAvailable();
     useEffect(() => onLocalEmbeddingNeedsIndex(() => void rebuildRef.current()), []);
     useEffect(() => {
-        if (!active || !isLocalEmbeddingAvailable()) return;
+        if (!active || !available) return;
         let current = true;
         ensureLocalEmbedding(modelId).then(
             () => {
@@ -46,7 +53,7 @@ export function useLocalEmbeddingReindex(rebuild: () => unknown, active: boolean
         return () => {
             current = false;
         };
-    }, [active, modelId]);
+    }, [active, available, modelId]);
 }
 
 export interface LocalEmbeddingSetup {
@@ -64,9 +71,10 @@ export function useLocalEmbeddingSetup(active: boolean): LocalEmbeddingSetup {
     const modelId = useLocalEmbeddingModel();
     const [status, setStatus] = useState<LocalEmbeddingStatus | null>(null);
     const [attempt, setAttempt] = useState(0);
+    const available = useLocalEmbeddingAvailable();
 
     useEffect(() => {
-        if (!active || !isLocalEmbeddingAvailable()) return;
+        if (!active || !available) return;
         let current = true;
         const refresh = (): Promise<void> =>
             getLocalEmbeddingStatus(modelId).then(
@@ -91,7 +99,7 @@ export function useLocalEmbeddingSetup(active: boolean): LocalEmbeddingSetup {
             current = false;
             clearInterval(timer);
         };
-    }, [active, modelId, attempt]);
+    }, [active, available, modelId, attempt]);
 
     const retry = useCallback(() => setAttempt((n) => n + 1), []);
     return { modelId, status, choose: setLocalEmbeddingModel, retry };

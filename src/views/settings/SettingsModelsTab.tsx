@@ -14,8 +14,8 @@ import {
     DEFAULT_SERVICE_URLS,
     DEFAULT_TOKEN_LIMITS
 } from '@/config';
+import { useLocalEmbeddingAvailable } from '@/hooks';
 import { getKoboldLoadedModelName } from '@/services/llm';
-import { isLocalEmbeddingAvailable } from '@/services/rag';
 import { CLI_BRIDGE_DEFAULT_URLS, isCliBridgeProvider } from '@/types';
 import { SettingsLocalEmbedding } from './SettingsLocalEmbedding';
 import type { SettingsModelsTabProps } from './types';
@@ -172,6 +172,7 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
     setComfyTimeoutSec,
     setSettingsTab
 }) => {
+    const builtInEmbedding = useLocalEmbeddingAvailable();
     const revConfig = getEffectiveModelConfig('review');
     const effRevProv = reviewProvider || devProvider || 'gemini';
     const isRevInherited = !reviewModel && !reviewProvider;
@@ -1068,7 +1069,7 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                             </label>
                             <div className="flex flex-wrap gap-1.5 bg-mist-100 p-1 rounded-xl border border-edge-strong">
                                 {[
-                                    ...(isLocalEmbeddingAvailable() ? [BUILT_IN_EMBEDDING_TAB] : []),
+                                    ...(builtInEmbedding ? [BUILT_IN_EMBEDDING_TAB] : []),
                                     ...EMBEDDING_PROVIDER_TABS
                                 ].map((p) => (
                                     <button
@@ -1085,7 +1086,7 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                                     </button>
                                 ))}
                             </div>
-                            {embeddingProvider === BUILT_IN_EMBEDDING_TAB.id && isLocalEmbeddingAvailable() ? (
+                            {embeddingProvider === BUILT_IN_EMBEDDING_TAB.id && builtInEmbedding ? (
                                 <SettingsLocalEmbedding />
                             ) : (
                                 <>

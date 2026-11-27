@@ -1,8 +1,14 @@
 # Built-in embeddings
 
-Lore search (RAG) needs an embedding model. In the desktop app, Settings > Model Options > Embedding Provider has **Built-in**: the app downloads llama.cpp and a small embedding model, starts it, and rebuilds the lore index. Picking the provider is the whole setup. Ported from Prospero's Companion (`providers/builtin_recall.py`).
+Lore search (RAG) needs an embedding model. Settings > Model Options > Embedding Provider has **Built-in**: the app downloads llama.cpp and a small embedding model, starts it, and rebuilds the lore index. Picking the provider is the whole setup. Ported from Prospero's Companion (`providers/builtin_recall.py`).
 
-A plain browser has no way to start a program, so the option is shown only in the desktop app.
+| How the app runs | Who runs the model | Where its files go | When it closes |
+| --- | --- | --- | --- |
+| Desktop app | The app's supervisor, asked over IPC | `<backends folder>/llamacpp/`, `<backends folder>/embedding-models/` | When the app quits |
+| `Launch EllipsisProse.bat`, `npm start` | `server.js`, through `embedding-launcher.js` and `/api/embedding` | `data/embeddings/` | When the server window closes |
+| Single-file build, static host, another device on the LAN | Nobody: a page alone cannot start programs, so the option is not shown | | |
+
+Both paths run the same module, `desktop/lib/embedding.cjs`.
 
 ## What the writer sees
 
@@ -24,12 +30,13 @@ The list also shows embedding `.gguf` files already on the PC: any file with `em
 
 ## How it runs
 
-- llama.cpp is the pinned build `b11457`, checked against its SHA-256. The two suggested models are checked the same way. Files land in `<backends folder>/llamacpp/` and `<backends folder>/embedding-models/`.
+- llama.cpp is the pinned build `b11457`, checked against its SHA-256. The two suggested models are checked the same way. The desktop app unpacks with its bundled 7-Zip; the launcher uses the system's `tar` (Windows 10 and later).
 - `llama-server` runs in embedding mode on a free loopback port, **on the processor only** (`-ngl 0`), with at most four threads and a 2,048-token context. Texts are cut to 6,000 characters.
 - Because it never touches the graphics card, it takes no lease from the VRAM coordinator and is never unloaded by it. KoboldCpp, ComfyUI and audio.cpp keep the whole card.
 - It starts when the provider is chosen or on the first embedding request, and stops with the app.
 - Search queries and stored lore get the instructions each model was trained with (EmbeddingGemma, Qwen3, nomic, mxbai, Arctic).
-- The page never calls the server. It asks the desktop app over IPC (`getEmbeddingStatus`, `ensureEmbedding`, `embed`), so there is no port to configure and no CORS.
+- The page never calls llama.cpp. It asks the desktop app over IPC (`getEmbeddingStatus`, `ensureEmbedding`, `embed`) or its own server (`POST /api/embedding/status`, `/ensure`, `/embed`), so there is no port to configure and no CORS.
+- `/api/embedding` answers only requests from this machine, addressed to loopback and not sent by another site's page (`isLocalRequest` in `comfy-launcher.js`). A model file can only be one the search found, never a path the page names.
 - `ELLIPSISPROSE_LLAMA_SERVER` names a `llama-server` of your own to use instead of the download.
 
 ## Where the code is
@@ -38,7 +45,8 @@ The list also shows embedding `.gguf` files already on the PC: any file with `em
 | --- | --- |
 | `desktop/lib/embedding.cjs` | Pinned runtime and models, model search, download, start, embed. |
 | `desktop/main.cjs`, `desktop/preload-main.cjs` | The three IPC calls. |
-| `src/services/rag/localEmbedding.ts` | The page's side of the bridge, the chosen model, the re-index signal. |
+| `embedding-launcher.js`, `server.js` | The same three calls over `/api/embedding` for the launcher. |
+| `src/services/rag/localEmbedding.ts` | The page's side of either path, the chosen model, the re-index signal. |
 | `src/services/rag/embeddingService.ts` | Provider `llamacpp`. Its fingerprint label includes the model id. |
 | `src/hooks/useLocalEmbedding.ts` | Setup progress for Settings; keeps the model set up and re-indexes from the shell. |
 | `src/views/settings/SettingsLocalEmbedding.tsx` | The model list and progress. |

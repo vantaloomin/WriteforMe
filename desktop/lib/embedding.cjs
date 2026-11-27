@@ -171,13 +171,30 @@ function postJson(url, body, timeoutMs = REQUEST_MS) {
     });
 }
 
+/** The system's tar. Windows 10 and later ship one that also reads .zip. */
 function untar(archive, destDir) {
     fs.mkdirSync(destDir, { recursive: true });
     return new Promise((resolve, reject) => {
-        const proc = spawn('tar', ['-xzf', archive, '-C', destDir], { windowsHide: true });
+        const proc = spawn('tar', ['-xf', archive, '-C', destDir], { windowsHide: true });
         proc.on('error', reject);
         proc.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`tar exited with ${code}`))));
     });
+}
+
+/**
+ * The desktop app unpacks .zip with its bundled 7-Zip. Started from the launcher (server.js) there
+ * is no 7-Zip package, so the system's tar does it.
+ */
+async function unpackArchive(archive, destDir) {
+    if (archive.endsWith('.zip')) {
+        try {
+            require.resolve('7zip-bin');
+        } catch (_) {
+            return untar(archive, destDir);
+        }
+        return extract(archive, destDir);
+    }
+    return untar(archive, destDir);
 }
 
 /** Why the server stopped: llama.cpp's own reason when it gave one, else the end of its log. */
@@ -206,7 +223,7 @@ class LocalEmbedding {
         this.platformKey = platformKey;
         this.homeDir = homeDir;
         this.download = download;
-        this.unpack = unpack || ((archive, dest) => (archive.endsWith('.zip') ? extract(archive, dest) : untar(archive, dest)));
+        this.unpack = unpack || unpackArchive;
         this.launcher = launcher || ((serverPath) => ({ command: serverPath, args: [] }));
         this.running = null;   // { modelId, port }
         this.progress = null;  // { modelId, phase, received, total }

@@ -169,3 +169,35 @@ test('a computer with no pinned build says so', async () => {
     assert.equal(embedding.status().available, false);
     await assert.rejects(embedding.ensure(), new RegExp(SERVER_ENV));
 });
+
+test('the launcher\'s server runs the same model and answers in the bridge\'s shape', async () => {
+    const { createEmbeddingLauncher } = require('../../embedding-launcher.js');
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ep-embed-srv-'));
+    const fake = path.join(root, 'fake-server.cjs');
+    fs.writeFileSync(fake, FAKE_SERVER);
+    const launcher = createEmbeddingLauncher({
+        dataDir: root,
+        platformKey: 'win32-x64',
+        homeDir: path.join(root, 'home'),
+        download: async ({ dest }) => { fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.writeFileSync(dest, 'x'); },
+        unpack: async (_archive, dest) => { fs.mkdirSync(dest, { recursive: true }); fs.writeFileSync(path.join(dest, 'llama-server.exe'), ''); },
+        launcher: () => ({ command: process.execPath, args: [fake] })
+    });
+    try {
+        const before = await launcher.call('status', {});
+        assert.equal(before.ok, true);
+        assert.equal(before.value.available, true);
+
+        const ensured = await launcher.call('ensure', { model: DEFAULT_MODEL_ID });
+        assert.equal(ensured.value.state, 'ready');
+        assert.ok(fs.existsSync(path.join(root, 'embeddings', 'embedding-models', MODELS[0].file)), 'files live under the data folder');
+
+        const embedded = await launcher.call('embed', { model: DEFAULT_MODEL_ID, texts: ['abc'], kind: 'query' });
+        assert.equal(embedded.value[0][0], 'task: search result | query: abc'.length);
+
+        const refused = await launcher.call('embed', { model: 'file:/etc/passwd', texts: ['abc'] });
+        assert.deepEqual([refused.ok, /not on this PC/.test(refused.error)], [false, true]);
+    } finally {
+        launcher.dispose();
+    }
+});
