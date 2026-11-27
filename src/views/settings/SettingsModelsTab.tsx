@@ -230,9 +230,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                         <h3 className="text-sm font-bold text-ink-900 font-serif tracking-tight">
                             1. Choose AI Provider &amp; Credentials
                         </h3>
-                        <span className="text-xs uppercase font-mono px-2.5 py-0.5 rounded-full bg-gold-tint border border-gold-edge text-gold-ink font-semibold">
-                            Step 1
-                        </span>
                     </div>
                     <p className="text-xs text-ink-500 mt-1">
                         Select your primary AI service and enter your API key or local endpoint. Credentials remain
@@ -242,9 +239,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
 
                 {/* Provider Switcher */}
                 <div>
-                    <label className="block text-xs font-bold text-ink-500 uppercase tracking-wider mb-1.5 font-mono">
-                        Active Provider
-                    </label>
                     <div className="grid grid-cols-2 sm:grid-cols-7 gap-1.5 bg-mist-100 p-1 rounded-xl border border-edge-strong">
                         {PROVIDER_TABS.map((p) => (
                             <button
@@ -289,9 +283,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                                 <span className="text-xs font-bold uppercase tracking-wider text-ink-700 font-mono">
                                     Google Gemini API Key
                                 </span>
-                                <span className="text-xs px-2.5 py-0.5 rounded-full bg-sage-tint border border-sage-edge text-sage-800 font-mono font-semibold">
-                                    Active Provider
-                                </span>
                             </div>
                             <input
                                 type="password"
@@ -320,9 +311,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-bold uppercase tracking-wider text-ink-700 font-mono">
                                     OpenRouter API Key
-                                </span>
-                                <span className="text-xs px-2.5 py-0.5 rounded-full bg-sage-tint border border-sage-edge text-sage-800 font-mono font-semibold">
-                                    Active Provider
                                 </span>
                             </div>
                             <input
@@ -388,9 +376,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                                 <span className="text-xs font-bold uppercase tracking-wider text-ink-700 font-mono">
                                     nano-GPT API Key
                                 </span>
-                                <span className="text-xs px-2.5 py-0.5 rounded-full bg-sage-tint border border-sage-edge text-sage-800 font-mono font-semibold">
-                                    Active Provider
-                                </span>
                             </div>
                             <input
                                 type="password"
@@ -419,9 +404,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-bold uppercase tracking-wider text-ink-700 font-mono">
                                     Anthropic API Key
-                                </span>
-                                <span className="text-xs px-2.5 py-0.5 rounded-full bg-sage-tint border border-sage-edge text-sage-800 font-mono font-semibold">
-                                    Active Provider
                                 </span>
                             </div>
                             <input
@@ -452,9 +434,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                                 <span className="text-xs font-bold uppercase tracking-wider text-ink-700 font-mono">
                                     KoboldCPP Endpoint (Local)
                                 </span>
-                                <span className="text-xs px-2.5 py-0.5 rounded-full bg-sage-tint border border-sage-edge text-sage-800 font-mono font-semibold">
-                                    Active Provider
-                                </span>
                             </div>
                             <input
                                 type="text"
@@ -479,9 +458,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-bold uppercase tracking-wider text-ink-700 font-mono">
                                     Codex CLI Bridge Endpoint (Local)
-                                </span>
-                                <span className="text-xs px-2.5 py-0.5 rounded-full bg-sage-tint border border-sage-edge text-sage-800 font-mono font-semibold">
-                                    Active Provider
                                 </span>
                             </div>
                             <input
@@ -528,9 +504,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                             <div className="flex items-center justify-between">
                                 <span className="text-xs font-bold uppercase tracking-wider text-ink-700 font-mono">
                                     Claude Code Bridge Endpoint (Local)
-                                </span>
-                                <span className="text-xs px-2.5 py-0.5 rounded-full bg-sage-tint border border-sage-edge text-sage-800 font-mono font-semibold">
-                                    Active Provider
                                 </span>
                             </div>
                             <input
@@ -694,9 +667,6 @@ export const SettingsModelsTab: React.FC<SettingsModelsTabProps> = ({
                         <h3 className="text-sm font-bold text-ink-900 font-serif tracking-tight">
                             2. Primary AI Model
                         </h3>
-                        <span className="text-xs uppercase font-mono px-2.5 py-0.5 rounded-full bg-sage-tint border border-sage-edge text-sage-800 font-semibold">
-                            Master Model
-                        </span>
                     </div>
                     <p className="text-xs text-ink-500 mt-1">
                         Powers story concept, character creation, act architecture, sequence outlines, scene blueprints,
