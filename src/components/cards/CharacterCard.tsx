@@ -60,6 +60,9 @@ export interface CharacterCardCharacter extends VoiceCastMember {
 const TAG_CLASS =
     'text-[10px] uppercase font-mono font-bold border px-2 py-0.5 rounded-full break-words min-w-0';
 
+const SEED_CLASS =
+    'text-[9px] font-mono px-1.5 py-0.5 rounded bg-gold-tint border border-gold-edge text-gold-ink font-semibold';
+
 export interface CharacterCardProps {
     c: CharacterCardCharacter | null;
     story?: AudioStoryLike | null;
@@ -598,25 +601,21 @@ export function CharacterCard({
                             <span className="text-[9px] text-ink-500 font-bold uppercase tracking-wider font-mono">
                                 Voice Profile (Breeze 2 Instruct)
                             </span>
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    onEdit &&
-                                    onEdit(
-                                        'voice_seed',
-                                        `Deterministic Voice Seed for ${c.name}`,
-                                        String(resolvedVoiceSeed)
-                                    )
-                                }
-                                className={`text-[9px] font-mono px-1.5 py-0.5 rounded bg-gold-tint border border-gold-edge text-gold-ink font-semibold ${
-                                    onEdit ? 'hover:bg-gold-tint/80 cursor-pointer' : ''
-                                }`}
-                                title={`Deterministic voice seed for ${c.name}: #${resolvedVoiceSeed}${
-                                    onEdit ? ' (Click to edit seed number)' : ''
-                                }`}
-                            >
-                                Seed: #{resolvedVoiceSeed}
-                            </button>
+                            {onEditInline ? (
+                                <InlineChoiceField
+                                    label={`Voice seed for ${c.name}`}
+                                    value={String(resolvedVoiceSeed)}
+                                    inputMode="numeric"
+                                    onCommit={(next) => onEditInline('voice_seed', next)}
+                                    renderResting={(edit) => (
+                                        <button type="button" onClick={edit} className={SEED_CLASS}>
+                                            Seed: #{resolvedVoiceSeed}
+                                        </button>
+                                    )}
+                                />
+                            ) : (
+                                <span className={SEED_CLASS}>Seed: #{resolvedVoiceSeed}</span>
+                            )}
                             {resolvedSigHash && (
                                 <span
                                     className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-surface border border-edge text-ink-600 font-semibold"

@@ -21,6 +21,13 @@ export interface InlineChoiceFieldProps {
     onCommit: (value: string) => void;
     /** Classes for the resting value, so it can look like a heading or a pill. */
     className?: string;
+    /** Keyboard hint for touch devices, e.g. "numeric". */
+    inputMode?: 'text' | 'numeric';
+    /**
+     * Draws the resting value itself and is handed the function that starts editing. Use it
+     * when clicking the value already does something else, so editing needs its own button.
+     */
+    renderResting?: (edit: () => void) => React.ReactNode;
 }
 
 export function InlineChoiceField({
@@ -31,7 +38,9 @@ export function InlineChoiceField({
     placeholder,
     allowEmpty = false,
     onCommit,
-    className = ''
+    className = '',
+    inputMode,
+    renderResting
 }: InlineChoiceFieldProps) {
     const [open, setOpen] = useState(false);
     const [draft, setDraft] = useState(value);
@@ -87,15 +96,18 @@ export function InlineChoiceField({
         }
     };
 
+    const edit = () => {
+        setDraft(allowCustom ? value : '');
+        setOpen(true);
+    };
+
     if (!open) {
+        if (renderResting) return <>{renderResting(edit)}</>;
         return (
             <button
                 type="button"
                 aria-label={`Edit ${label}: ${shown || placeholder || 'not set'}`}
-                onClick={() => {
-                    setDraft(allowCustom ? value : '');
-                    setOpen(true);
-                }}
+                onClick={edit}
                 className={`group inline-flex items-center gap-1 max-w-full min-w-0 text-left cursor-pointer rounded-md hover:bg-wash focus-visible:ring-1 focus-visible:ring-gold outline-none transition-colors ${className}`}
             >
                 <span className="break-words min-w-0">{shown || placeholder}</span>
@@ -120,6 +132,7 @@ export function InlineChoiceField({
                     aria-controls={listId}
                     value={draft}
                     placeholder={placeholder}
+                    inputMode={inputMode}
                     onFocus={(event) => event.target.select()}
                     onChange={(event) => {
                         setDraft(event.target.value);
