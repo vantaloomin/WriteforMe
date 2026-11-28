@@ -44,7 +44,9 @@ const STRUCTURAL_SLOP_IDS = new Set([
     'smart_quotes',
     'echo_chamber',
     'punctuation_collapse',
-    'question_free_dialogue'
+    'question_free_dialogue',
+    'dialogue_ping_pong',
+    'dialogue_echo'
 ]);
 
 function formatBeatAnalysisBlock(raw: unknown): string {

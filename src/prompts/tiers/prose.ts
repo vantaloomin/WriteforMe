@@ -326,10 +326,12 @@ EVALUATION CRITERIA (in order of severity):
 22. **Dialogue Presence & Voice Execution:** In scenes with 2+ characters present, verify spoken dialogue constitutes an active presence. Flag any multi-character scene that descends into silent pantomime or lacks dialogue (fewer than 3 spoken lines without narrative justification). In solo scenes, flag if the character fails to vocalize, mutter aloud, or speak to externalize their interiority. NOTE: Do not enforce or calculate any specific mathematical percentage or quota of dialogue words; evaluate dialogue presence based on dramatic necessity and character engagement.
 23. **Telegraphic Syntax & Binary Whiplash:** Flag repetitive strings of three or more consecutive sentences under four words (e.g., "He fires. Metal groans. The gate falls."), or jarring binary whiplash between ultra-short fragments and sprawling abstract run-on clauses.
 24. **Abrupt Memory Transitions:** Flag any memory or backstory moment that feels jarringly tacked on—starting abruptly with "He remembered...", freezing the scene for a detached info-dump, or using cliché snap-backs like "shaking his head" or "snapping back to reality."
+25. **Dialogue Ping-Pong:** Flag a long volley of short spoken lines traded paragraph after paragraph with no paragraph of action, interiority or description breaking it, or where every tag or beat sits in the same slot of the line. A brief rapid exchange at a peak of tension is craft; a volley that runs most of a page is not. Use any ping-pong note in <advisory_stylistic_observations> as evidence.
+26. **Dialogue Echoing:** Flag replies built from the previous speaker's wording ("You can sew and chew." / "I can sew and chew and judge you.", "Like a gusset?" / "Like a second refrigerator."). One echo that lands a joke or a turn is craft; when reply after reply borrows the line before, every character sounds like one voice. Use any echoing note in <advisory_stylistic_observations> as evidence, and name the echoed lines in the issue.
 
 **MINOR (note in critique_analysis only):**
-25. **Dialogue Tag Variety:** Creative dialogue tags ("she hissed", "he growled") — note but do not fail.
-26. **Pacing Preference:** Subjective rhythm preferences — note but do not fail.
+27. **Dialogue Tag Variety:** Creative dialogue tags ("she hissed", "he growled") — note but do not fail.
+28. **Pacing Preference:** Subjective rhythm preferences — note but do not fail.
 
 PASS/FAIL DECISION FRAMEWORK:
 - **PASS** if: The prose faithfully executes the start → pivot → end choreography, preserves all specific dialogue stakes/challenges/plot terms with semantic accuracy, respects epistemic boundaries, maintains physical continuity, advances physical posture, and uses correct character names.

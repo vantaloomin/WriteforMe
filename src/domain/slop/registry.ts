@@ -554,6 +554,19 @@ export const AI_SLOP_REGISTRY: SlopPack = {
             severity: "flag"
         },
         {
+            id: "dialogue_ping_pong",
+            title: "6+ short spoken lines in a row",
+            severity: "flag",
+            window: 30,
+            count: 6
+        },
+        {
+            id: "dialogue_echo",
+            title: "3+ replies that echo the other speaker",
+            severity: "flag",
+            count: 3
+        },
+        {
             id: "repeated_phrase",
             title: "Same phrase (3 to 8 words) 3+ times in a scene",
             severity: "flag",

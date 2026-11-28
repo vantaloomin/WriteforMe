@@ -17,7 +17,7 @@ import {
     querySemanticEventLog,
     type ContinuityStoryState
 } from '@/domain/continuity';
-import { DEFAULT_SLOP_CONFIG, scanTextForSlop } from '@/domain/slop';
+import { DEFAULT_SLOP_CONFIG, dialogueShapeAdvisories, scanTextForSlop } from '@/domain/slop';
 import type { SlopConfig, Story } from '@/types';
 import { safeEscapeRegex } from '@/utils';
 import type { LlmToolDefinition } from './types';
@@ -636,6 +636,9 @@ export function executeLocalTool(
                     ) {
                         flags.push(`${dh.categoryTitle}: ${dh.match}.`);
                     }
+                });
+                dialogueShapeAdvisories(draftSlop.densityHits).forEach((advice) => {
+                    flags.push(advice);
                 });
                 slopSummary = {
                     hard_count: draftSlop.summary.hardCount,

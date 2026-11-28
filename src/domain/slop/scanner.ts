@@ -20,6 +20,7 @@ import {
     isAsciiLetter
 } from './registry';
 import { buildEffectiveSlopData, buildStoryGrandfatherSet } from './config';
+import { detectDialogueEchoes, detectDialoguePingPong } from './dialogueShape';
 import { detectRepeatedPhrases } from './phrases';
 
 export function isAtSentenceStart(text: string, pos: number): boolean {
@@ -501,6 +502,30 @@ export function scanTextForSlop(text: string, options?: ScanTextForSlopOptions):
                 densityHits.push(
                     makeHit(phraseRule.severity, 'repeated_phrase', phraseRule.title, repeat.phrase, first.start, first.end, `used ${repeat.count} times`, false)
                 );
+            }
+        }
+
+        // Paragraph-shape habits. Audio drama is all turns and echoes on purpose, so prose only.
+        if (!isAudioDrama) {
+            const pingRule = densMap.dialogue_ping_pong;
+            if (pingRule && pingRule.severity !== 'off') {
+                const runs = detectDialoguePingPong(rawText, { minTurns: pingRule.count, maxWords: pingRule.window });
+                for (const run of runs.slice(0, 4)) {
+                    densityHits.push(
+                        makeHit(pingRule.severity, 'dialogue_ping_pong', pingRule.title, `${run.turns} short spoken lines in a row`, run.start, run.end, `${run.bareTurns} with no tag or beat`, false)
+                    );
+                }
+            }
+            const echoDialogueRule = densMap.dialogue_echo;
+            if (echoDialogueRule && echoDialogueRule.severity !== 'off') {
+                const echoes = detectDialogueEchoes(rawText, { ignoreWords: grandfather.tokenLower });
+                if (echoes.length >= (echoDialogueRule.count || 3)) {
+                    for (const echo of echoes.slice(0, 8)) {
+                        densityHits.push(
+                            makeHit(echoDialogueRule.severity, 'dialogue_echo', echoDialogueRule.title, echo.phrase, echo.start, echo.end, 'repeats the line before', false)
+                        );
+                    }
+                }
             }
         }
 
