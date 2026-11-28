@@ -3,6 +3,8 @@
  * Verbose pipeline log formatting utilities for individual log dossiers and full audit exports.
  */
 
+import { costOfLogEntry, formatUsd } from './callCost';
+
 export interface VerboseLogThinkingConfig {
     enabled?: boolean;
     budget?: number;
@@ -64,6 +66,8 @@ export interface VerboseLogEntry {
     reasoningTokensUsed?: number | null;
     responseTokens?: number | null;
     tokensUsed?: number | null;
+    costUsd?: number | null;
+    costExact?: boolean;
     error?: string;
     lastError?: string;
     errorDetails?: string;
@@ -170,6 +174,12 @@ export function formatVerboseLogEntry(entry: VerboseLogEntry | null | undefined)
         lines.push(`Thinking Tokens:          ${thinkTok.toLocaleString()}`);
         lines.push(`Response Output Tokens:   ${respTok}`);
         lines.push(`Total Tokens Used:        ${totalTok}`);
+        const cost = costOfLogEntry(entry);
+        if (cost) {
+            lines.push(
+                `${cost.exact ? 'Cost (billed):           ' : 'Cost (approximate):      '} ${formatUsd(cost.usd)}`
+            );
+        }
     }
 
     if (entry.validationSummary && !entry.isValidation && !isError) {

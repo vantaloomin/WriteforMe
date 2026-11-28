@@ -22,6 +22,7 @@ import {
     callAnthropic,
     callNanoGPT,
     callOpenRouter,
+    costLogFields,
     getEffectiveModelConfig,
     getOpenRouterModelLimits,
     resolveAgentMaxTokens,
@@ -81,6 +82,10 @@ export interface PromptLogEntry extends Record<string, unknown> {
     promptTokens: number | null;
     cachedTokens: number | null;
     cacheWriteTokens: number | null;
+    /** What the call cost in dollars; null for local, free or unpriced models. */
+    costUsd: number | null;
+    /** True when the provider reported the charge, false when it is tokens times a list price. */
+    costExact: boolean;
     routedProvider: string | null;
     responseTokens: number | null;
     thinkingTokens: number | null;
@@ -318,6 +323,8 @@ export async function dispatchAI(
         promptTokens: initialEstimatedPromptTokens,
         cachedTokens: null,
         cacheWriteTokens: null,
+        costUsd: null,
+        costExact: false,
         routedProvider: null,
         responseTokens: null,
         thinkingTokens: null,
@@ -400,6 +407,16 @@ export async function dispatchAI(
                         promptTokens: promptToks,
                         cachedTokens: cachedToks,
                         cacheWriteTokens: cacheWriteToks,
+                        ...costLogFields({
+                            provider: targetProvider,
+                            model: metadata.modelUsed || currentModelToUse,
+                            promptTokens: promptToks,
+                            cachedTokens: cachedToks,
+                            cacheWriteTokens: cacheWriteToks,
+                            responseTokens: respToks,
+                            thinkingTokens: thinkingToks,
+                            reportedCost: metadata.reportedCost
+                        }),
                         routedProvider,
                         responseTokens: respToks,
                         thinkingTokens: thinkingToks,

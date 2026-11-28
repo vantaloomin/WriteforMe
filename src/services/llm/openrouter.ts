@@ -107,6 +107,10 @@ interface OpenRouterResponsePayload {
         };
         cache_read_input_tokens?: number;
         cache_creation_input_tokens?: number;
+        /** Credits charged for the call; one credit is one US dollar. */
+        cost?: number;
+        is_byok?: boolean;
+        cost_details?: { upstream_inference_cost?: number | null };
     };
 }
 
@@ -1070,6 +1074,11 @@ export async function callOpenRouter(
                     usage.cache_creation_input_tokens ??
                     0
             ) || 0;
+        // With the user's own provider key, OpenRouter bills its fee and the provider bills the rest.
+        const reportedCost =
+            typeof usage.cost === 'number'
+                ? usage.cost + (usage.is_byok ? Number(usage.cost_details?.upstream_inference_cost) || 0 : 0)
+                : null;
         const routedProvider = data.provider || null;
         if (normalizedSessionId && routedProvider && smartRouting?.providerNameToSlug) {
             const resolvedSlug =
@@ -1117,6 +1126,7 @@ export async function callOpenRouter(
                     reasoningTokensUsed: rToks,
                     cachedTokens: cachedToks,
                     cacheWriteTokens: cacheWriteToks,
+                    reportedCost,
                     routedProvider,
                     reasoningText: initialReasoning,
                     fullResponse: rawText
@@ -1201,6 +1211,7 @@ export async function callOpenRouter(
                 reasoningTokensUsed: thinkingToks,
                 cachedTokens: cachedToks,
                 cacheWriteTokens: cacheWriteToks,
+                reportedCost,
                 routedProvider,
                 reasoningText,
                 fullResponse: text

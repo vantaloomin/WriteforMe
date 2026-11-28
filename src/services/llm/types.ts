@@ -20,6 +20,8 @@ export interface LlmSuccessMetadata {
     reasoningTokensUsed: number;
     cachedTokens?: number;
     cacheWriteTokens?: number;
+    /** Dollars the provider says this call cost, when it reports one. */
+    reportedCost?: number | null;
     routedProvider?: string | null;
     reasoningText?: string;
     fullResponse?: string;
