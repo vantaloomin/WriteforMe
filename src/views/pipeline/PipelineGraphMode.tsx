@@ -136,6 +136,10 @@ export const PipelineGraphMode: React.FC<PipelineGraphModeProps> = ({
                                                     <span>{step.title}</span>
                                                 </div>
 
+                                                <p className="step-summary text-sm text-ink-800 leading-snug mb-2">
+                                                    {step.summary}
+                                                </p>
+
                                                 <div className="flex flex-wrap items-center gap-1.5 mb-2">
                                                     <span className="text-xs font-bold uppercase font-mono px-2.5 py-0.5 rounded-full bg-mist-100 border border-edge-strong text-ink-700">
                                                         {step.badge}
@@ -164,12 +168,7 @@ export const PipelineGraphMode: React.FC<PipelineGraphModeProps> = ({
                                                     )}
                                                 </div>
 
-                                                <div className="text-xs text-ink-600 line-clamp-2 mb-2">
-                                                    <strong className="text-ink-800 font-semibold">Inputs:</strong>{' '}
-                                                    {step.inputs}
-                                                </div>
-
-                                                <div className="text-[11px] text-ember-900 font-semibold bg-ember-tint border border-ember-edge px-2.5 py-1 rounded-xl font-mono">
+                                                <div className="text-[11px] text-ink-500 font-mono">
                                                     Gate: {step.gate}
                                                 </div>
                                             </div>
@@ -204,6 +203,7 @@ export const PipelineGraphMode: React.FC<PipelineGraphModeProps> = ({
                                         )}
                                     </div>
                                     <h3 className="font-serif font-bold text-ink-900 text-lg mt-1.5">{spec.title}</h3>
+                                    <p className="text-sm text-ink-800 leading-snug mt-1">{activeStepDef?.summary}</p>
                                 </div>
                                 {isInspectingDifferent ? (
                                     <button
