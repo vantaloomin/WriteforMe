@@ -10,6 +10,7 @@ import { migrateAudioDramaSettings } from '@/config';
 import type { AudioDramaSettings } from '@/config';
 import { resolveCharacter } from '@/domain/story';
 import { parseAudioDramaScript } from './scriptParser';
+import { extractSpokenLines, stripInterviewQuestions } from './spokenLines';
 
 export interface VoiceCastMember extends Partial<CastMember> {
     name?: string;
@@ -890,8 +891,8 @@ export function splitReferenceTextIntoSentences(cleanedText: unknown): string[] 
 }
 
 /**
- * Extracts enough full sentences from the beginning of a character's interview
- * to reach at least ~15 seconds of speech without cutting mid-sentence.
+ * Extracts enough full sentences of the character's own speech from their interview
+ * to reach at least ~15 seconds without cutting mid-sentence.
  */
 export function extractPersonalizedReferenceTextFromInterview(
     interviewText: unknown,
@@ -902,21 +903,29 @@ export function extractPersonalizedReferenceTextFromInterview(
             ? options.minSeconds
             : VOICE_REFERENCE_MIN_SECONDS;
 
-    const sentences = splitReferenceTextIntoSentences(interviewText);
-    if (sentences.length === 0) return '';
+    // The character's own quoted speech first. Narration and the interviewer's questions are
+    // only used when the interview has too little quoted speech to calibrate a voice from.
+    const spoken = extractSpokenLines(interviewText);
+    const fromSpoken = takeSentencesUntil(spoken, minSeconds);
+    if (fromSpoken) return fromSpoken;
+    if (estimateReferenceTextSeconds(spoken) >= minSeconds * SPOKEN_ONLY_MIN_SHARE) {
+        return sanitizeVoiceReferenceText(spoken);
+    }
+    return takeSentencesUntil(stripInterviewQuestions(interviewText), minSeconds);
+}
 
-    let reachedMin = false;
+/** Below the full length, quoted speech is still used alone once it reaches this share of it. */
+const SPOKEN_ONLY_MIN_SHARE = 0.6;
+
+function takeSentencesUntil(text: string, minSeconds: number): string {
     const selected: string[] = [];
-    for (let i = 0; i < sentences.length; i++) {
-        selected.push(sentences[i]);
-        const estSec = estimateReferenceTextSeconds(selected.join(' '));
-        if (estSec >= minSeconds) {
-            reachedMin = true;
-            break;
+    for (const sentence of splitReferenceTextIntoSentences(text)) {
+        selected.push(sentence);
+        if (estimateReferenceTextSeconds(selected.join(' ')) >= minSeconds) {
+            return selected.join(' ').trim();
         }
     }
-    if (!reachedMin) return '';
-    return selected.join(' ').trim();
+    return '';
 }
 
 /**

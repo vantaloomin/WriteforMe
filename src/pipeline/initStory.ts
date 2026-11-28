@@ -10,6 +10,7 @@ import {
     cleanCharacterNameFromVoiceProfile,
     extractPersonalizedReferenceTextFromInterview,
     getDeterministicVoiceSeed,
+    spokenSample,
     isValidQwenVoiceProfile,
     synthesizeQwenVoiceDesignProfile,
     synthesizeVoiceDesignProfile,
@@ -1330,7 +1331,7 @@ BEGIN DEVELOPING CHARACTER PROFILES`;
                 `Interviewing starting cast (${completedInterviews}/${total} done)...`
             );
 
-            char.voice_sample = `${interviewText.split('.')[0].substring(0, 100)}...`;
+            char.voice_sample = spokenSample(interviewText);
             const parsedYearning = extractTag(interviewOutput, 'core_yearning');
             if (parsedYearning && parsedYearning.trim()) {
                 char.core_desire = decodeXmlEntities(parsedYearning.trim());
