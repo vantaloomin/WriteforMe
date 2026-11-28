@@ -41,6 +41,32 @@ anything is sent or logged, in the two places every prompt passes through
 
 Any other prompt builder can use the same mark: put `CACHE_POINT` where the repeated part ends.
 
+## Prompts without a mark
+
+Most prompts are built once per step and carry no mark. For those, the dispatcher
+(`pipeline/aiDispatch.ts`) finds the cache point by itself, with `sharedPrefixSplit()` in
+`src/domain/prompt/sharedPrefix.ts`. It remembers the last prompt of each step (per story and
+model). When the same step runs again within five minutes and its prompt starts with the same
+text, the end of that shared start becomes the cache point: written on the second call, read
+back from the third on.
+
+- Nothing is marked on a step's first call, so a prompt that is sent once never pays the write
+  charge.
+- The shared start has to be at least 4,000 characters (about a thousand tokens, Claude's
+  smallest cacheable size) and ends at a line break.
+- A point that still fits is reused letter for letter, because a provider only reads back a
+  start that ends in the same place.
+
+This covers a retry that adds a note to the end of the same prompt, a review that runs again
+after a fix, and a loop whose prompts open with the same story context. It cannot help a prompt
+that opens with text of its own. The Scene Planner was such a prompt (it opened with the
+sequence it was planning), so its order changed: story bible, author note, styles, world primer
+and cast roster first, then the sequence. Planning the next sequence, or retrying this one, now
+shares that start.
+
+The lore steps (distiller, cluster synthesizer) have nothing more to cache: each call shares
+only its system prompt, which was already marked.
+
 ## What it costs
 
 Claude charges about a quarter more than normal to write a part into its cache, and about a tenth
@@ -56,9 +82,14 @@ whether it pays off for a given story and model.
 
 ## Not done
 
-- Only the scene-writing prompt is marked. Planning, review and continuity prompts are unchanged.
-- No second mark at the end of the story tier. It would help only when the next scene is written
-  within five minutes, and would cost a little on every scene otherwise.
+- Other prompts that open with call-specific text (most review and continuity prompts) still
+  share only their system prompt between different scenes. Each needs the Scene Planner's
+  reorder before the dispatcher can find a shared start.
+- No second mark at the end of the story tier of the scene-writing prompt. It would help only
+  when the next scene is written within five minutes, and would cost a little on every scene
+  otherwise.
 - KoboldCPP keeps the work for one prompt at a time, so the saved start is lost as soon as a
   different kind of call (a review, a summary) runs. Adventure solves that by saving the model's
   state to disk between calls; that is not ported here.
+- Not measured against a real Claude key yet. The Author's Log shows cache read and cache write
+  per call, which is where to check.
