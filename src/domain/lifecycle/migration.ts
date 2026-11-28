@@ -4,6 +4,7 @@
  */
 
 import type { Act, CastMember, Sequence, Story } from '@/types';
+import { moveSheetOutOfInterview } from '@/domain/imports';
 import type { AudioStoryLike } from '@/domain/audio';
 import {
     SEQUENCE_DEFAULT_FUNCTIONS,
@@ -96,6 +97,8 @@ export interface MigratedStory extends Partial<Omit<Story, 'scenes' | 'beats' | 
 export function migrateStoryToSequences<TStory>(storyData: TStory): TStory {
     if (!storyData || typeof storyData !== 'object') return storyData;
     const story = { ...(storyData as unknown as MigratedStory) };
+
+    if (Array.isArray(story.cast)) story.cast = story.cast.map((member) => moveSheetOutOfInterview(member));
 
     story.continuity_ledger = Array.isArray(story.continuity_ledger)
         ? story.continuity_ledger
