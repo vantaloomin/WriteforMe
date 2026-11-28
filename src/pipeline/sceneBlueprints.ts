@@ -624,10 +624,8 @@ export async function generateScenes(
                 Number(meta.valid_from_act) <= Number(currentSequence.parent_act || 1),
             asArray<LoreItem>(storyToUse.lore)
         );
-        const sceneLoreBlocks = formatLoreForPrompt(
-            asString(storyToUse.world_primer) || null,
-            seqLoreDocs
-        );
+        const worldPrimerBlock = formatLoreForPrompt(asString(storyToUse.world_primer) || null, null);
+        const sequenceLoreBlock = formatLoreForPrompt(null, seqLoreDocs);
 
         const castRosterBlock = `<cast_roster>\n${asArray<CastMember & Record<string, unknown>>(storyToUse.cast).map((c) => `- ${c.name} (${c.role}${c.corner_role ? ` [${asString(c.corner_role)}]` : ''}): Safety Habit / Flaw: ${c.core_flaw || 'None'}, Yearning: ${c.core_desire || 'None'}`).join('\n')}\n</cast_roster>`;
         const epGraph = ensureEpistemicGraph(storyToUse as ContinuityStoryState);
@@ -677,7 +675,22 @@ export async function generateScenes(
                 seqIdx,
                 liveSequence
             );
-            let prompt = `Plan approximately ${targetIdeal} high-leverage Scene Blueprints for Sequence ${liveSeqNum}: ${asString(liveSequence.title)}.
+            // Cache order (docs/PROMPT_CACHE_ORDER.md): what every sequence of this story shares
+            // comes first, what belongs to this sequence follows. The dispatcher finds the
+            // shared start by itself when the planner runs again within five minutes.
+            let prompt = `<story_bible_context>
+Synthesized Authorial Persona: ${asString(liveStoryForScenes.synthesized_authorial_persona)}
+Genre Pacing & Rules: ${asString(liveStoryForScenes.genre_pacing_and_dialogue_rules)}
+Strict Anti-Patterns: ${asString(liveStoryForScenes.strict_anti_patterns)}
+World Bible: ${asString(liveStoryForScenes.status_quo)}
+</story_bible_context>
+${getAuthorNoteXml(liveStoryForScenes as Partial<Story> & Record<string, unknown>)}
+
+${availableStylesXml}
+
+${worldPrimerBlock ? `${worldPrimerBlock}\n\n` : ''}${castRosterBlock}
+
+Plan approximately ${targetIdeal} high-leverage Scene Blueprints for Sequence ${liveSeqNum}: ${asString(liveSequence.title)}.
 Sequence Description & Mandates: ${asString(liveSequence.description)}
 ${liveSequence.starting_state ? `Sequence Starting State / Entry Anchor: ${asString(liveSequence.starting_state)}\n` : ''}${liveSequence.sequence_objective ? `Sequence Objective: ${asString(liveSequence.sequence_objective)}\n` : ''}${liveSequence.dramatic_question ? `Dramatic Question: ${asString(liveSequence.dramatic_question)}\n` : ''}${liveSequence.sequence_climax ? `Sequence Climax: ${asString(liveSequence.sequence_climax)}\n` : ''}${liveSequence.ending_hook ? `Sequence Ending Hook: ${asString(liveSequence.ending_hook)}\n` : ''}${liveSequence.next_sequence_boundary_guard ? `Sequence Boundary Guard (Do NOT Preempt Next Sequence): ${asString(liveSequence.next_sequence_boundary_guard)}\n` : ''}${liveSequence.four_corner_movement ? `\nSequence Four-Corner Movement (Safety Habit testing): ${asString(liveSequence.four_corner_movement)}\n` : ''}${liveStoryForScenes.heart_of_the_dilemma ? `\nCentral Human Dilemma: "${asString(liveStoryForScenes.heart_of_the_dilemma)}"\n` : ''}
 ${sceneTargetBlock}
@@ -686,19 +699,7 @@ ${sceneContinuityBlock}
 
 ${activeActAndSeqXml}
 
-${availableStylesXml}
-
-${sceneLoreBlocks ? `${sceneLoreBlocks}\n\n` : ''}${castRosterBlock}
-
-${epistemicPromptBlock}${formatLongformSceneDirectives(liveStoryForScenes, liveSeqNum, 'planner', liveSeqs.length || 8, undefined, serialPlan?.plans)}
-
-<story_bible_context>
-Synthesized Authorial Persona: ${asString(liveStoryForScenes.synthesized_authorial_persona)}
-Genre Pacing & Rules: ${asString(liveStoryForScenes.genre_pacing_and_dialogue_rules)}
-Strict Anti-Patterns: ${asString(liveStoryForScenes.strict_anti_patterns)}
-World Bible: ${asString(liveStoryForScenes.status_quo)}
-</story_bible_context>
-${getAuthorNoteXml(liveStoryForScenes as Partial<Story> & Record<string, unknown>)}
+${sequenceLoreBlock ? `${sequenceLoreBlock}\n\n` : ''}${epistemicPromptBlock}${formatLongformSceneDirectives(liveStoryForScenes, liveSeqNum, 'planner', liveSeqs.length || 8, undefined, serialPlan?.plans)}
 
 MANDATORY LORE, CAST & BOUNDARY CONTINUITY DIRECTIVES:
 1. Lore Grounding: Ground all scene settings, environments, factions, and institutional rules in the established world lore provided in <world_primer> and <relevant_lore>. Prioritize established locations and organizations from the world lore before inventing new ones.

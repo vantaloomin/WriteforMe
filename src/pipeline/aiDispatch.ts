@@ -5,6 +5,8 @@
  */
 
 import { takeCachePoint } from '@/domain/prompt/cacheLayout';
+import { sharedPrefixSplit } from '@/domain/prompt/sharedPrefix';
+import { stepNameOf } from '@/domain/story/usageSummary';
 import {
     CLOUD_API_URLS,
     DEFAULT_API_TIMEOUT_SEC,
@@ -42,6 +44,7 @@ import {
     throwIfModelStopped
 } from '@/services/llm';
 import { beginCloudActivity } from '@/services/vram';
+import { getFeatureOptions } from '@/stores/useFeatureOptionsStore';
 import { CLI_BRIDGE_DEFAULT_URLS, isCliBridgeProvider, isLocalProvider, type CliBridgeProviderId } from '@/types';
 
 export const PROMPT_LOG_CAP = LOG_AND_PROMPT_LIMITS.promptLogCap;
@@ -148,7 +151,7 @@ export async function dispatchAI(
     } = request;
 
     // A prompt builder may mark where its repeated start ends; the mark never reaches a model.
-    const { prompt, cacheSplitIndex } = takeCachePoint(rawPrompt);
+    const { prompt, cacheSplitIndex: markedSplitIndex } = takeCachePoint(rawPrompt);
 
     const win =
         typeof window !== 'undefined'
@@ -347,6 +350,13 @@ export async function dispatchAI(
         .replace(/[^a-zA-Z0-9._-]/g, '_')
         .slice(0, 48);
     const openRouterSessionId = `ep:${storyKeyForCache}:${activeRole}:${modelKeyForCache}`;
+
+    // Where the builder marked nothing, mark the start this step's last prompt also had.
+    const cacheSplitIndex =
+        markedSplitIndex ??
+        (getFeatureOptions().promptCacheMarks
+            ? sharedPrefixSplit(`${storyKeyForCache}:${modelKeyForCache}:${stepNameOf(logName)}`, prompt)
+            : null);
 
     console.log(
         `[AI Call - "${logName}"] Starting request... Model: ${currentModelToUse} | Role: ${activeRole} | Provider: ${targetProvider} | JSON: ${isJson} | MaxTok: ${agentMaxTokens}`
