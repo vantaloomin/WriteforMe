@@ -9,6 +9,23 @@ model call shows what it cost, and its cache read and cache write counts when it
 the charge the provider reported. Local providers (KoboldCPP, the Claude Code and Codex
 bridges), free models and models nobody has a price for show nothing.
 
+## Models and filters
+
+Open, the summary also lists the models that ran (one chip each, with tokens and cost) and the
+step table has a Model column. Every token part, model chip and step row is a filter: click one
+and the log below shows only the calls that match, the picked items stand out and the rest of
+that list dims. Picks of one kind add up (two steps show both); picks of different kinds narrow
+(a model and a step show that step's calls on that model). The totals line and the bar follow
+the selection and read `72.2K tokens in 6 of 14 calls`. "Clear filters" resets it. While a
+filter is on, entries that are not model calls (delays, validations) are hidden. The filter is
+`UsageFilter` in `usageSummary.ts`; the view's state is in `src/views/logs/useLogUsage.ts`.
+
+## Calls logged before costs were kept
+
+A cost is saved on the entry when its call finishes. Entries from an older build have none, but
+they do carry provider, model and token counts, so `withLogCost()` prices them when the log is
+shown, at today's prices. An entry with a cost on record is never repriced.
+
 ## Where a price comes from
 
 `estimateCallCost` in `src/services/llm/callCost.ts` tries these in order:
