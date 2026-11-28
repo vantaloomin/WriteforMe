@@ -31,6 +31,7 @@ import { formatAllVerboseLogs, formatVerboseLogEntry, type VerboseLogEntry } fro
 import { copyVerboseLogToClipboard, downloadVerboseLogFile } from '@/services/browser';
 import { LogCacheTokens, LogCost } from './LogCallFigures';
 import { LogUsage } from './LogUsage';
+import { useLogUsage } from './useLogUsage';
 
 export type LogFilterKey = 'all' | 'calls' | 'validations' | 'delays' | 'audio' | 'errors' | string;
 
@@ -67,7 +68,7 @@ export interface LogsViewProps {
 }
 
 export function LogsView({
-    promptLog,
+    promptLog: loggedEntries,
     setPromptLog,
     logFilter,
     setLogFilter,
@@ -76,13 +77,12 @@ export function LogsView({
     storyTitle = 'EllipsisProse Project'
 }: LogsViewProps) {
     const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+    const { entries: promptLog, usageFilter, setUsageFilter, inUsageFilter } = useLogUsage(loggedEntries);
 
     const visibleLogs = promptLog.filter((entry) => {
-        const isErr =
-            entry.status === 'error' || entry.status === 'validation_failed' || entry.isError;
-        if (logFilter === 'calls') {
-            return !entry.isDelay && !entry.isValidation && !entry.isAudio && !isErr;
-        }
+        if (!inUsageFilter(entry)) return false;
+        const isErr = entry.status === 'error' || entry.status === 'validation_failed' || entry.isError;
+        if (logFilter === 'calls') return !entry.isDelay && !entry.isValidation && !entry.isAudio && !isErr;
         if (logFilter === 'validations') return Boolean(entry.isValidation);
         if (logFilter === 'delays') return Boolean(entry.isDelay);
         if (logFilter === 'audio') {
@@ -284,7 +284,7 @@ export function LogsView({
                 </div>
             </div>
 
-            <LogUsage entries={promptLog} />
+            <LogUsage entries={promptLog} filter={usageFilter} onFilter={setUsageFilter} />
 
             <div className="space-y-4">
                 {promptLog.length === 0 ? (
@@ -293,7 +293,7 @@ export function LogsView({
                     </div>
                 ) : visibleLogs.length === 0 ? (
                     <div className="text-center text-ink-400 py-16 italic bg-surface rounded-2xl border border-edge shadow-sm">
-                        No entries match the selected filter &quot;{logFilter}&quot;.
+                        No entries match the selected filters.
                     </div>
                 ) : (
                     visibleLogs.map((entry, idx) => {

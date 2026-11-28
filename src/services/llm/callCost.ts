@@ -114,3 +114,30 @@ export function costLogFields(call: PricedCall): { costUsd: number | null; costE
     const cost = estimateCallCost(call);
     return { costUsd: cost ? cost.usd : null, costExact: cost ? cost.exact : false };
 }
+
+/**
+ * A log entry with its cost filled in when it has none on record. Calls logged before the app
+ * kept costs still carry their provider, model and token counts, so they are priced when shown,
+ * at today's prices. An entry that already has a cost, or a null one, is returned as it is.
+ */
+export function withLogCost<
+    T extends CallUsage & {
+        provider?: string;
+        modelUsed?: string;
+        status?: string;
+        costUsd?: unknown;
+        reasoningTokensUsed?: number | null;
+    }
+>(entry: T): T {
+    if (entry.costUsd !== undefined || entry.status !== 'success') return entry;
+    if (!entry.provider || !entry.modelUsed) return entry;
+    return {
+        ...entry,
+        ...costLogFields({
+            ...entry,
+            provider: entry.provider,
+            model: entry.modelUsed,
+            thinkingTokens: entry.thinkingTokens ?? entry.reasoningTokensUsed
+        })
+    };
+}

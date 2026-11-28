@@ -1,7 +1,8 @@
 /**
  * @module domain/story/usageSummary
  * Adds up the log's model calls for the usage summary: tokens split into five parts that do
- * not overlap, what the calls cost, and the same per pipeline step.
+ * not overlap, what the calls cost, and the same per pipeline step and per model. Also the
+ * filter the summary puts on the log: any mix of token parts, steps and models.
  */
 
 import { MODEL_PRICES } from '@/config/pricing';
@@ -15,6 +16,7 @@ export type UsageParts = Record<UsagePart, number>;
 export interface UsageEntry {
     function?: string;
     provider?: string;
+    modelUsed?: string;
     promptTokens?: number | null;
     cachedTokens?: number | null;
     cacheWriteTokens?: number | null;
@@ -32,6 +34,15 @@ export interface StepUsage {
     cost: CostTotal | null;
     /** This step's share of all tokens, 0 to 1. */
     share: number;
+    /** The models that ran this step, most used first. */
+    models: string[];
+}
+
+export interface ModelUsage {
+    name: string;
+    calls: number;
+    tokens: number;
+    cost: CostTotal | null;
 }
 
 export interface UsageSummary {
@@ -41,6 +52,8 @@ export interface UsageSummary {
     cost: CostTotal | null;
     /** Largest first. */
     steps: StepUsage[];
+    /** Largest first. */
+    models: ModelUsage[];
 }
 
 const count = (value: unknown): number => {
@@ -84,6 +97,13 @@ export function stepNameOf(logName: string | undefined): string {
     return name || 'Other';
 }
 
+/** The model a call ran on, as the provider named it. */
+export function modelNameOf(entry: UsageEntry): string {
+    return String(entry.modelUsed || '').trim() || 'Unknown model';
+}
+
+const tokensOf = (parts: UsageParts): number => USAGE_PARTS.reduce((sum, part) => sum + parts[part], 0);
+
 function addCost(total: CostTotal | null, entry: UsageEntry): CostTotal | null {
     const cost = costOfLogEntry(entry);
     if (!cost) return total;
@@ -95,34 +115,118 @@ function addCost(total: CostTotal | null, entry: UsageEntry): CostTotal | null {
 /** The whole log's usage. Entries that used no tokens (delays, validations) are left out. */
 export function summarizeUsage(entries: ReadonlyArray<UsageEntry>): UsageSummary {
     const parts: UsageParts = { input: 0, cacheWrite: 0, cacheRead: 0, thinking: 0, output: 0 };
-    const byStep = new Map<string, Omit<StepUsage, 'share'>>();
+    const byStep = new Map<string, Omit<StepUsage, 'share' | 'models'> & { models: Map<string, number> }>();
+    const byModel = new Map<string, ModelUsage>();
     let tokens = 0;
     let calls = 0;
     let cost: CostTotal | null = null;
 
     for (const entry of entries) {
         const own = usagePartsOf(entry);
-        const ownTokens = USAGE_PARTS.reduce((sum, part) => sum + own[part], 0);
+        const ownTokens = tokensOf(own);
         if (ownTokens <= 0) continue;
         for (const part of USAGE_PARTS) parts[part] += own[part];
         tokens += ownTokens;
         calls += 1;
         cost = addCost(cost, entry);
 
+        const modelName = modelNameOf(entry);
+        const model = byModel.get(modelName) || { name: modelName, calls: 0, tokens: 0, cost: null };
+        byModel.set(modelName, {
+            name: modelName,
+            calls: model.calls + 1,
+            tokens: model.tokens + ownTokens,
+            cost: addCost(model.cost, entry)
+        });
+
         const name = stepNameOf(entry.function);
-        const step = byStep.get(name) || { name, calls: 0, tokens: 0, cost: null };
+        const step = byStep.get(name) || { name, calls: 0, tokens: 0, cost: null, models: new Map() };
+        step.models.set(modelName, (step.models.get(modelName) || 0) + ownTokens);
         byStep.set(name, {
             name,
             calls: step.calls + 1,
             tokens: step.tokens + ownTokens,
-            cost: addCost(step.cost, entry)
+            cost: addCost(step.cost, entry),
+            models: step.models
         });
     }
 
+    const largestFirst = (a: { tokens: number; name: string }, b: { tokens: number; name: string }): number =>
+        b.tokens - a.tokens || a.name.localeCompare(b.name);
     const steps = [...byStep.values()]
-        .map((step) => ({ ...step, share: tokens > 0 ? step.tokens / tokens : 0 }))
-        .sort((a, b) => b.tokens - a.tokens || a.name.localeCompare(b.name));
-    return { parts, tokens, calls, cost, steps };
+        .map((step) => ({
+            ...step,
+            share: tokens > 0 ? step.tokens / tokens : 0,
+            models: [...step.models.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name)
+        }))
+        .sort(largestFirst);
+    return { parts, tokens, calls, cost, steps, models: [...byModel.values()].sort(largestFirst) };
+}
+
+/** What the reader picked in the summary. An empty list means "any". */
+export interface UsageFilter {
+    parts: UsagePart[];
+    steps: string[];
+    models: string[];
+}
+export type UsageFilterKind = keyof UsageFilter;
+
+export const NO_USAGE_FILTER: UsageFilter = { parts: [], steps: [], models: [] };
+
+export function isUsageFilterActive(filter: UsageFilter): boolean {
+    return filter.parts.length + filter.steps.length + filter.models.length > 0;
+}
+
+/** Adds the value to its list, or takes it out if it is already there. */
+export function toggleUsageFilter(filter: UsageFilter, kind: UsageFilterKind, value: string): UsageFilter {
+    const list: string[] = filter[kind];
+    const next = list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+    return { ...filter, [kind]: next };
+}
+
+/**
+ * True when the entry passes the filter. With nothing picked every entry passes; once
+ * something is picked only model calls can, so delays and validations drop out of the list.
+ * `ignore` leaves one kind out, which is how each list in the summary keeps showing the
+ * choices its own selection would otherwise hide.
+ */
+export function matchesUsageFilter(entry: UsageEntry, filter: UsageFilter, ignore?: UsageFilterKind): boolean {
+    const parts = ignore === 'parts' ? [] : filter.parts;
+    const steps = ignore === 'steps' ? [] : filter.steps;
+    const models = ignore === 'models' ? [] : filter.models;
+    if (parts.length + steps.length + models.length === 0) return true;
+    const own = usagePartsOf(entry);
+    if (tokensOf(own) <= 0) return false;
+    if (parts.length > 0 && !parts.some((part) => own[part] > 0)) return false;
+    if (steps.length > 0 && !steps.includes(stepNameOf(entry.function))) return false;
+    return models.length === 0 || models.includes(modelNameOf(entry));
+}
+
+export interface FilteredUsage {
+    /** The calls that pass the whole filter: the totals and the bar. */
+    shown: UsageSummary;
+    /** Model calls in the log, filter or not. */
+    calls: number;
+    /** Each list is narrowed by the other two kinds only, so its own unpicked rows stay. */
+    parts: UsageParts;
+    steps: StepUsage[];
+    models: ModelUsage[];
+}
+
+export function filterUsage(entries: ReadonlyArray<UsageEntry>, filter: UsageFilter): FilteredUsage {
+    const all = summarizeUsage(entries);
+    if (!isUsageFilterActive(filter)) {
+        return { shown: all, calls: all.calls, parts: all.parts, steps: all.steps, models: all.models };
+    }
+    const without = (kind: UsageFilterKind): UsageSummary =>
+        summarizeUsage(entries.filter((entry) => matchesUsageFilter(entry, filter, kind)));
+    return {
+        shown: summarizeUsage(entries.filter((entry) => matchesUsageFilter(entry, filter))),
+        calls: all.calls,
+        parts: without('parts').parts,
+        steps: without('steps').steps,
+        models: without('models').models
+    };
 }
 
 /** "842", "308.1K", "11.6M": short enough to sit in a legend or a table column. */
