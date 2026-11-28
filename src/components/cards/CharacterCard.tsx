@@ -4,10 +4,10 @@
  * and Breeze 2 7-dimension voice profile + reference transcript inspection.
  */
 
-import React, { useState } from 'react';
 import {
+    FileText,
+    Maximize2,
     MessageSquare,
-    Minus,
     RefreshCw,
     RotateCcw,
     Square,
@@ -28,7 +28,7 @@ import { CORNER_ROLE_OPTIONS, cornerRoleLabel, STORY_ROLE_PRESETS } from '@/conf
 import { EditButton } from '../common/EditButton';
 import { InlineChoiceField } from '../common/InlineChoiceField';
 import { CharacterPortrait } from './CharacterPortrait';
-import { CharacterSheetPanel } from './CharacterSheetPanel';
+import { READER_SECTION_TITLES, type ReaderSectionId } from './characterReaderSections';
 
 export interface CharacterCardCharacter extends VoiceCastMember {
     role?: string;
@@ -57,6 +57,9 @@ export interface CharacterCardCharacter extends VoiceCastMember {
 const TAG_CLASS =
     'text-[10px] uppercase font-mono font-bold border px-2 py-0.5 rounded-full break-words min-w-0';
 
+const READ_BUTTON_CLASS =
+    'text-xs font-semibold text-ink-700 hover:text-ink-900 flex items-center gap-2 px-4 py-2.5 bg-mist-50 rounded-xl border border-edge-strong hover:bg-wash transition-colors';
+
 const SEED_CLASS =
     'text-[9px] font-mono px-1.5 py-0.5 rounded bg-gold-tint border border-gold-edge text-gold-ink font-semibold';
 
@@ -66,6 +69,8 @@ export interface CharacterCardProps {
     onEdit?: (fieldPath: string, label: string, currentValue?: string) => void;
     /** Saves a short field edited in place on the card (name, role, corner role). */
     onEditInline?: (fieldPath: string, value: string) => void;
+    /** Opens this character in the large reader, on the given tab when one is named. */
+    onRead?: (section?: ReaderSectionId) => void;
     onAuditionVoice?: (
         char: CharacterCardCharacter,
         opts?: { forceRecalibrate?: boolean }
@@ -87,6 +92,7 @@ export function CharacterCard({
     story,
     onEdit,
     onEditInline,
+    onRead,
     onAuditionVoice,
     onRecalibrateVoice,
     onRerollVoiceSeed,
@@ -99,7 +105,7 @@ export function CharacterCard({
     onUploadPortrait,
     onRemovePortrait
 }: CharacterCardProps) {
-    const [isExpanded, setIsExpanded] = useState(false);
+    const hasSheet = typeof c?.details?.sheet === 'string' && Boolean(c.details.sheet);
     if (!c) return null;
 
     const resolvedVoiceProfile = getVoiceDescriptionForCharacter(c, story) || c.vocal_cadence || '';
@@ -139,18 +145,33 @@ export function CharacterCard({
                     onRemove={onRemovePortrait && (() => onRemovePortrait(c))}
                 />
                 <div className="flex-1 min-w-0 space-y-3">
-                    {onEditInline ? (
-                        <InlineChoiceField
-                            label="Name"
-                            value={c.name || ''}
-                            onCommit={(next) => onEditInline('name', next)}
-                            className="text-lg font-bold font-serif text-ink-900 px-1 -mx-1"
-                        />
-                    ) : (
-                        <h3 className="text-lg font-bold font-serif text-ink-900 break-words min-w-0">
-                            {c.name}
-                        </h3>
-                    )}
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                            {onEditInline ? (
+                                <InlineChoiceField
+                                    label="Name"
+                                    value={c.name || ''}
+                                    onCommit={(next) => onEditInline('name', next)}
+                                    className="text-lg font-bold font-serif text-ink-900 px-1 -mx-1"
+                                />
+                            ) : (
+                                <h3 className="text-lg font-bold font-serif text-ink-900 break-words min-w-0">
+                                    {c.name}
+                                </h3>
+                            )}
+                        </div>
+                        {onRead && (
+                            <button
+                                type="button"
+                                onClick={() => onRead()}
+                                aria-label={`Open ${c.name}`}
+                                title="Open"
+                                className="character-read shrink-0 w-10 h-10 flex items-center justify-center rounded-xl text-ink-600 bg-surface border border-edge-strong hover:bg-wash hover:text-ink-900 transition-colors"
+                            >
+                                <Maximize2 size={15} />
+                            </button>
+                        )}
+                    </div>
                     <div className="flex flex-wrap items-center gap-2">
                         {onEditInline ? (
                             <>
@@ -515,7 +536,7 @@ export function CharacterCard({
                     <div className="bg-inset p-5 rounded-xl border border-edge-strong">
                         <div className="flex justify-between items-center gap-2 mb-1">
                             <div className="text-xs text-ink-500 font-bold uppercase tracking-wider font-mono">
-                                Backstory &amp; Provenance
+                                {READER_SECTION_TITLES.history}
                             </div>
                             {onEdit && (
                                 <EditButton
@@ -728,57 +749,17 @@ export function CharacterCard({
                     </div>
                 )}
 
-                {typeof c.details?.sheet === 'string' && c.details.sheet && (
-                    <CharacterSheetPanel
-                        sheet={c.details.sheet}
-                        onEdit={onEdit && (() => onEdit('details.sheet', 'Character Sheet', String(c.details?.sheet || '')))}
-                    />
-                )}
-
-                {c.details?.deep_profile && (
-                    <div className="pt-2 border-t border-edge-soft">
-                        <button
-                            onClick={() => setIsExpanded(!isExpanded)}
-                            className="w-full text-xs font-semibold text-ink-700 hover:text-ink-900 flex items-center justify-center gap-2 py-2.5 bg-mist-50 rounded-xl border border-edge-strong hover:bg-wash transition-colors"
-                        >
-                            {isExpanded ? (
-                                <React.Fragment>
-                                    <Minus size={12} /> Hide Full Interview
-                                </React.Fragment>
-                            ) : (
-                                <React.Fragment>
-                                    <MessageSquare size={12} /> Read Full Persona Interview
-                                </React.Fragment>
-                            )}
-                        </button>
-                        {isExpanded && (
-                            <div className="mt-3 p-5 bg-inset rounded-xl border border-edge-strong text-xs font-serif leading-loose h-80 overflow-y-auto custom-scrollbar animate-fade-in relative">
-                                <div className="flex justify-between items-center gap-2 mb-2 pb-2 border-b border-edge-strong">
-                                    <div className="text-xs text-ink-500 font-sans font-bold uppercase font-mono">
-                                        Archival Persona Interview Transcript
-                                    </div>
-                                    {onEdit && (
-                                        <EditButton
-                                            className="p-1.5 min-w-7 min-h-7 shrink-0"
-                                            title="Deep Profile"
-                                            value={c.details?.deep_profile}
-                                            onSave={() =>
-                                                onEdit(
-                                                    'details.deep_profile',
-                                                    'Deep Profile',
-                                                    c.details?.deep_profile
-                                                )
-                                            }
-                                        />
-                                    )}
-                                </div>
-                                <div
-                                    className="prose max-w-none text-ink-800 text-xs font-serif leading-loose"
-                                    dangerouslySetInnerHTML={{
-                                        __html: parseMarkdown(c.details.deep_profile)
-                                    }}
-                                />
-                            </div>
+                {onRead && (hasSheet || c.details?.deep_profile) && (
+                    <div className="pt-2 border-t border-edge-soft flex flex-wrap gap-2">
+                        {hasSheet && (
+                            <button type="button" onClick={() => onRead('sheet')} className={READ_BUTTON_CLASS}>
+                                <FileText size={12} /> {READER_SECTION_TITLES.sheet}
+                            </button>
+                        )}
+                        {c.details?.deep_profile && (
+                            <button type="button" onClick={() => onRead('interview')} className={READ_BUTTON_CLASS}>
+                                <MessageSquare size={12} /> {READER_SECTION_TITLES.interview}
+                            </button>
                         )}
                     </div>
                 )}

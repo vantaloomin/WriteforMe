@@ -41,3 +41,13 @@ A model asked for a character's `<role>` often answers with a paragraph. `withSh
 character's `summary`, which the card shows under the name. It runs where characters are
 created (story setup, characters spawned mid-story, directives), when a role is saved from the
 card, and when a saved story is opened, so older stories are repaired on load.
+
+## Long text is read in the reader
+
+The opposite case: an interview, a character sheet or a backstory is too long for a card.
+**Read** on a character card opens `CharacterReader` (`src/components/cards`), a large dialog
+that is full screen on a phone, with one tab per long text (`characterReaderSections.ts` decides
+the tabs and leaves out empty ones). The **Character Sheet** and **Interview** buttons at the foot
+of the card open it on that tab. The arrows, or the left and right keys, move to the next
+character and keep the tab. The pencil beside a text opens the same edit modal the card uses.
+`CastCards.tsx` holds which character is open.

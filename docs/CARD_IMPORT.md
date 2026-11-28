@@ -67,7 +67,7 @@ A label nothing recognises takes the place of the heading it sits under; with no
 is kept under **Notes** in the character sheet. Nothing in the file is dropped.
 
 **The sheet is not the interview.** The grouped sheet is kept on the character as its own thing
-(**Read Character Sheet** on the card, editable). The persona interview is left empty, and is
+(**Character Sheet** on the card, which opens it in the reader, editable). The persona interview is left empty, and is
 written by the model the first time the character is in a scene, with the sheet given to it as
 canon. The Writer is shown both for every character in a scene: the sheet for facts, the interview
 for voice. Unrevealed vault secrets are scrubbed from the sheet the same way as from the interview.
