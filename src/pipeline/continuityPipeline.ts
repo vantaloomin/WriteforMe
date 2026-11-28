@@ -8,6 +8,7 @@ import {
     cleanCharacterNameFromVoiceProfile,
     extractPersonalizedReferenceTextFromInterview,
     getDeterministicVoiceSeed,
+    spokenSample,
     isAudioDramaScriptText,
     isValidQwenVoiceProfile,
     normalizeAudioDramaScript,
@@ -1056,10 +1057,7 @@ export async function getCharacterDetails(
     const targetDetails = asRecord(target.details);
     targetDetails.deep_profile = deepProfileText;
     if (!target.voice_sample && deepProfileText) {
-        const firstSentence = deepProfileText.split('.')[0];
-        target.voice_sample = firstSentence
-            ? `${firstSentence.substring(0, 120)}...`
-            : `${deepProfileText.substring(0, 120)}...`;
+        target.voice_sample = spokenSample(deepProfileText);
     }
     const cleanedInterviewCadence = cleanCharacterNameFromVoiceProfile(parsedCadence, [char.name]);
     if (!target.user_edited_cadence) {

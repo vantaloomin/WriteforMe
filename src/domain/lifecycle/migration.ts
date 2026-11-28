@@ -19,6 +19,8 @@ import { normalizeSeriesFields } from '@/domain/series/plan';
 import {
     extractPersonalizedReferenceTextFromInterview,
     getDeterministicVoiceSeed,
+    isLegacyInterviewSample,
+    spokenSample,
     getVoiceDescriptionForCharacter,
     isValidQwenVoiceProfile,
     sanitizeVoiceReferenceText,
@@ -356,6 +358,9 @@ export function migrateStoryToSequences<TStory>(storyData: TStory): TStory {
                     c.deep_profile ||
                     c.canonical_interview_voice ||
                     '';
+                if (isLegacyInterviewSample(c.voice_sample, interviewSrc)) {
+                    c.voice_sample = spokenSample(interviewSrc);
+                }
                 const derivedRef = extractPersonalizedReferenceTextFromInterview(interviewSrc);
                 if (derivedRef) {
                     c.reference_text = derivedRef;
