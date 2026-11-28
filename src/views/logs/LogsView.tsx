@@ -4,8 +4,7 @@
  * verbose dossier pop-ups, and clipboard / .txt / .json exports.
  */
 
-import React, { useState } from 'react';
-import { VIEW_LABELS } from '@/config';
+import React from 'react';
 import {
     AlertOctagon,
     AlertTriangle,
@@ -18,19 +17,18 @@ import {
     Clock,
     Download,
     FileText,
-    History,
     Layers,
     Maximize2,
     MessageSquare,
     RefreshCw,
     Sparkles,
-    Trash2,
     XCircle
 } from '@/components/icons';
 import { formatAllVerboseLogs, formatVerboseLogEntry, type VerboseLogEntry } from '@/domain/story';
 import { copyVerboseLogToClipboard, downloadVerboseLogFile } from '@/services/browser';
 import { LogCacheTokens, LogCost } from './LogCallFigures';
 import { LogUsage } from './LogUsage';
+import { inLogTab, LogsHeader } from './LogsHeader';
 import { useLogUsage } from './useLogUsage';
 
 export type LogFilterKey = 'all' | 'calls' | 'validations' | 'delays' | 'audio' | 'errors' | string;
@@ -76,26 +74,8 @@ export function LogsView({
     showToast,
     storyTitle = 'EllipsisProse Project'
 }: LogsViewProps) {
-    const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
     const { entries: promptLog, usageFilter, setUsageFilter, inUsageFilter } = useLogUsage(loggedEntries);
-
-    const visibleLogs = promptLog.filter((entry) => {
-        if (!inUsageFilter(entry)) return false;
-        const isErr = entry.status === 'error' || entry.status === 'validation_failed' || entry.isError;
-        if (logFilter === 'calls') return !entry.isDelay && !entry.isValidation && !entry.isAudio && !isErr;
-        if (logFilter === 'validations') return Boolean(entry.isValidation);
-        if (logFilter === 'delays') return Boolean(entry.isDelay);
-        if (logFilter === 'audio') {
-            return Boolean(
-                entry.isAudio ||
-                    entry.category === 'audio' ||
-                    entry.stepId === 22 ||
-                    entry.tierName === 'Tier 7.0: Audio Drama'
-            );
-        }
-        if (logFilter === 'errors') return Boolean(isErr);
-        return true;
-    });
+    const visibleLogs = promptLog.filter((entry) => inUsageFilter(entry) && inLogTab(entry, logFilter));
 
     const handleCopyAllVerbose = () => {
         if (visibleLogs.length === 0) return;
@@ -103,7 +83,7 @@ export function LogsView({
         copyVerboseLogToClipboard(
             text,
             showToast,
-            `Copied verbose log (${visibleLogs.length} entries) to clipboard!`
+            `Copied ${visibleLogs.length} log entries`
         );
     };
 
@@ -145,150 +125,23 @@ export function LogsView({
 
     return (
         <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-2">
-                <div className="flex flex-wrap items-center gap-2.5">
-                    <h2 className="text-2xl sm:text-3xl font-serif font-bold text-ink-900 flex items-center gap-2.5">
-                        <History className="text-gold-ink" /> {VIEW_LABELS.logs}
-                    </h2>
-                    <span className="text-xs font-mono font-bold text-ink-500 bg-mist-100 px-3 py-1 rounded-full border border-edge-strong">
-                        {promptLog.length} entries
-                    </span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2.5 min-w-0 max-w-full">
-                    {/* Quick Verbose Copy & Export Toolbar */}
-                    <div className="flex items-center gap-1.5 bg-surface p-1 rounded-xl border border-edge-strong shadow-2xs">
-                        <button
-                            onClick={handleCopyAllVerbose}
-                            disabled={visibleLogs.length === 0}
-                            className="px-3 py-1.5 rounded-lg font-bold font-sans text-xs bg-gold-tint hover:bg-gold/25 text-gold-ink border border-gold-edge shadow-2xs transition-all flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                            title="Copy full verbose log with all context, parameters, and responses for troubleshooting"
-                        >
-                            <Copy size={13} />
-                            <span>Copy Verbose Log</span>
-                            {visibleLogs.length > 0 && (
-                                <span className="text-[10px] font-mono bg-surface/80 px-1.5 py-0.2 rounded border border-gold-edge/50">
-                                    {visibleLogs.length}
-                                </span>
-                            )}
-                        </button>
-
-                        <div className="relative">
-                            <button
-                                onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-                                disabled={visibleLogs.length === 0}
-                                className="px-3 py-1.5 rounded-lg font-bold font-sans text-xs bg-surface hover:bg-wash text-ink-800 border border-edge-strong shadow-2xs transition-all flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                                title="Export verbose logs to file"
-                            >
-                                <Download size={13} />
-                                <span>Export Log</span>
-                                <ChevronDown
-                                    size={11}
-                                    className={`transition-transform duration-200 ${
-                                        isExportMenuOpen ? 'rotate-180' : ''
-                                    }`}
-                                />
-                            </button>
-                            {isExportMenuOpen && (
-                                <div className="absolute right-0 mt-1.5 w-60 bg-surface border border-edge-strong rounded-xl shadow-xl z-30 py-1 text-xs animate-fade-in">
-                                    <button
-                                        onClick={() => {
-                                            handleExportText();
-                                            setIsExportMenuOpen(false);
-                                        }}
-                                        className="w-full text-left px-3.5 py-2.5 hover:bg-mist-100 flex items-center gap-2 text-ink-800 transition-colors cursor-pointer"
-                                    >
-                                        <FileText size={15} className="text-sage-700 shrink-0" />
-                                        <div>
-                                            <div className="font-bold">Formatted Text (.txt)</div>
-                                            <div className="text-[10px] text-ink-500">
-                                                Full verbose report for troubleshooting
-                                            </div>
-                                        </div>
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            handleExportJson();
-                                            setIsExportMenuOpen(false);
-                                        }}
-                                        className="w-full text-left px-3.5 py-2.5 hover:bg-mist-100 flex items-center gap-2 text-ink-800 transition-colors border-t border-edge-soft cursor-pointer"
-                                    >
-                                        <Download size={15} className="text-azure-700 shrink-0" />
-                                        <div>
-                                            <div className="font-bold">Raw JSON (.json)</div>
-                                            <div className="text-[10px] text-ink-500">
-                                                Full telemetry and parameter objects
-                                            </div>
-                                        </div>
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Log Filter Pills */}
-                    <div className="flex items-center min-w-0 max-w-full bg-surface p-1 rounded-xl border border-edge-strong shadow-2xs text-xs">
-                        <div className="flex flex-nowrap items-center gap-1 sm:gap-1.5 min-w-0 overflow-x-auto no-scrollbar touch-scroll">
-                            {(['all', 'calls', 'errors', 'validations', 'delays', 'audio'] as const).map(
-                                (filterKey) => {
-                                    const errCount = promptLog.filter(
-                                        (e) => e.status === 'error' || e.status === 'validation_failed' || e.isError
-                                    ).length;
-                                    const valCount = promptLog.filter((e) => e.isValidation).length;
-                                    const audioCount = promptLog.filter(
-                                        (e) =>
-                                            e.isAudio || e.category === 'audio' || e.stepId === 22
-                                    ).length;
-                                    return (
-                                        <button
-                                            key={filterKey}
-                                            onClick={() => setLogFilter(filterKey)}
-                                            className={`px-2 sm:px-3 py-1.5 rounded-lg font-bold capitalize whitespace-nowrap shrink-0 transition-all cursor-pointer flex items-center gap-1.5 ${
-                                                logFilter === filterKey
-                                                    ? 'bg-btn text-btn-ink shadow-2xs'
-                                                    : 'text-ink-600 hover:text-ink-900 hover:bg-lift'
-                                            }`}
-                                        >
-                                            <span>{filterKey}</span>
-                                            {filterKey === 'errors' && errCount > 0 && (
-                                                <span className="text-[10px] font-mono font-bold bg-rose-600 text-white px-1.5 py-0.2 rounded-full shadow-2xs">
-                                                    {errCount}
-                                                </span>
-                                            )}
-                                            {filterKey === 'validations' && valCount > 0 && (
-                                                <span className="text-[10px] font-mono text-ink-500 bg-mist-200/80 px-1.5 py-0.2 rounded-full">
-                                                    {valCount}
-                                                </span>
-                                            )}
-                                            {filterKey === 'audio' && audioCount > 0 && (
-                                                <span className="text-[10px] font-mono text-plum-700 bg-plum-tint px-1.5 py-0.2 rounded-full border border-plum-edge">
-                                                    {audioCount}
-                                                </span>
-                                            )}
-                                        </button>
-                                    );
-                                }
-                            )}
-                        </div>
-                        {promptLog.length > 0 && (
-                            <button
-                                onClick={() => setPromptLog([])}
-                                className="px-2.5 py-1.5 rounded-lg text-ink-400 hover:text-blush-600 hover:bg-blush-tint transition-colors ml-1 shrink-0 cursor-pointer"
-                                title="Clear logs"
-                            >
-                                <Trash2 size={14} />
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
+            <LogsHeader
+                entries={promptLog}
+                visibleCount={visibleLogs.length}
+                logFilter={logFilter}
+                setLogFilter={setLogFilter}
+                onCopy={handleCopyAllVerbose}
+                onExportText={handleExportText}
+                onExportJson={handleExportJson}
+                onClear={() => setPromptLog([])}
+            />
 
             <LogUsage entries={promptLog} filter={usageFilter} onFilter={setUsageFilter} />
 
             <div className="space-y-4">
                 {promptLog.length === 0 ? (
                     <div className="text-center text-ink-400 py-20 italic bg-surface rounded-2xl border border-edge shadow-sm">
-                        No pipeline logs or prompt dispatches yet. Start generating!
+                        Nothing logged yet.
                     </div>
                 ) : visibleLogs.length === 0 ? (
                     <div className="text-center text-ink-400 py-16 italic bg-surface rounded-2xl border border-edge shadow-sm">

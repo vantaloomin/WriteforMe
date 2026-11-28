@@ -2,7 +2,7 @@
  * @module domain/story/usageSummary
  * Adds up the log's model calls for the usage summary: tokens split into five parts that do
  * not overlap, what the calls cost, and the same per pipeline step and per model. Also the
- * filter the summary puts on the log: any mix of token parts, steps and models.
+ * filter the summary puts on the log: any mix of steps and models.
  */
 
 import { MODEL_PRICES } from '@/config/pricing';
@@ -165,21 +165,20 @@ export function summarizeUsage(entries: ReadonlyArray<UsageEntry>): UsageSummary
 
 /** What the reader picked in the summary. An empty list means "any". */
 export interface UsageFilter {
-    parts: UsagePart[];
     steps: string[];
     models: string[];
 }
 export type UsageFilterKind = keyof UsageFilter;
 
-export const NO_USAGE_FILTER: UsageFilter = { parts: [], steps: [], models: [] };
+export const NO_USAGE_FILTER: UsageFilter = { steps: [], models: [] };
 
 export function isUsageFilterActive(filter: UsageFilter): boolean {
-    return filter.parts.length + filter.steps.length + filter.models.length > 0;
+    return filter.steps.length + filter.models.length > 0;
 }
 
 /** Adds the value to its list, or takes it out if it is already there. */
 export function toggleUsageFilter(filter: UsageFilter, kind: UsageFilterKind, value: string): UsageFilter {
-    const list: string[] = filter[kind];
+    const list = filter[kind];
     const next = list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
     return { ...filter, [kind]: next };
 }
@@ -187,46 +186,26 @@ export function toggleUsageFilter(filter: UsageFilter, kind: UsageFilterKind, va
 /**
  * True when the entry passes the filter. With nothing picked every entry passes; once
  * something is picked only model calls can, so delays and validations drop out of the list.
- * `ignore` leaves one kind out, which is how each list in the summary keeps showing the
- * choices its own selection would otherwise hide.
+ * Picks of one kind add up (either step); the two kinds narrow each other.
  */
-export function matchesUsageFilter(entry: UsageEntry, filter: UsageFilter, ignore?: UsageFilterKind): boolean {
-    const parts = ignore === 'parts' ? [] : filter.parts;
-    const steps = ignore === 'steps' ? [] : filter.steps;
-    const models = ignore === 'models' ? [] : filter.models;
-    if (parts.length + steps.length + models.length === 0) return true;
-    const own = usagePartsOf(entry);
-    if (tokensOf(own) <= 0) return false;
-    if (parts.length > 0 && !parts.some((part) => own[part] > 0)) return false;
-    if (steps.length > 0 && !steps.includes(stepNameOf(entry.function))) return false;
-    return models.length === 0 || models.includes(modelNameOf(entry));
+export function matchesUsageFilter(entry: UsageEntry, filter: UsageFilter): boolean {
+    if (!isUsageFilterActive(filter)) return true;
+    if (tokensOf(usagePartsOf(entry)) <= 0) return false;
+    if (filter.steps.length > 0 && !filter.steps.includes(stepNameOf(entry.function))) return false;
+    return filter.models.length === 0 || filter.models.includes(modelNameOf(entry));
 }
 
 export interface FilteredUsage {
-    /** The calls that pass the whole filter: the totals and the bar. */
+    /** Every model call in the log. The model and step lists show these, so they never move. */
+    all: UsageSummary;
+    /** The calls that pass the filter: the totals line and the bar. */
     shown: UsageSummary;
-    /** Model calls in the log, filter or not. */
-    calls: number;
-    /** Each list is narrowed by the other two kinds only, so its own unpicked rows stay. */
-    parts: UsageParts;
-    steps: StepUsage[];
-    models: ModelUsage[];
 }
 
 export function filterUsage(entries: ReadonlyArray<UsageEntry>, filter: UsageFilter): FilteredUsage {
     const all = summarizeUsage(entries);
-    if (!isUsageFilterActive(filter)) {
-        return { shown: all, calls: all.calls, parts: all.parts, steps: all.steps, models: all.models };
-    }
-    const without = (kind: UsageFilterKind): UsageSummary =>
-        summarizeUsage(entries.filter((entry) => matchesUsageFilter(entry, filter, kind)));
-    return {
-        shown: summarizeUsage(entries.filter((entry) => matchesUsageFilter(entry, filter))),
-        calls: all.calls,
-        parts: without('parts').parts,
-        steps: without('steps').steps,
-        models: without('models').models
-    };
+    if (!isUsageFilterActive(filter)) return { all, shown: all };
+    return { all, shown: summarizeUsage(entries.filter((entry) => matchesUsageFilter(entry, filter))) };
 }
 
 /** "842", "308.1K", "11.6M": short enough to sit in a legend or a table column. */

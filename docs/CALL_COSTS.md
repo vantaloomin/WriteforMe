@@ -11,14 +11,30 @@ bridges), free models and models nobody has a price for show nothing.
 
 ## Models and filters
 
-Open, the summary also lists the models that ran (one chip each, with tokens and cost) and the
-step table has a Model column. Every token part, model chip and step row is a filter: click one
-and the log below shows only the calls that match, the picked items stand out and the rest of
-that list dims. Picks of one kind add up (two steps show both); picks of different kinds narrow
-(a model and a step show that step's calls on that model). The totals line and the bar follow
-the selection and read `72.2K tokens in 6 of 14 calls`. "Clear filters" resets it. While a
-filter is on, entries that are not model calls (delays, validations) are hidden. The filter is
-`UsageFilter` in `usageSummary.ts`; the view's state is in `src/views/logs/useLogUsage.ts`.
+Open, the summary also lists the models that ran (one chip each, with tokens and cost). The
+step table gets a Model column when more than one model ran. Model chips and step rows are
+filters: click one and the log below shows only the calls that match. A picked chip is filled,
+a picked row is bold with a bar at its left edge, and the unpicked ones in that list go quieter.
+Picks of one kind add up (two steps show both); the two kinds narrow each other (a model and a
+step show that step's calls on that model).
+
+Only the totals line, the bar and its legend follow the selection (`72.2K tokens in 6 of 14
+calls`). The chips and the rows always list everything with their own full figures, so a pick
+never hides another pick. "Clear filters" sits under the totals line whenever a filter is on,
+open or closed. While a filter is on, entries that are not model calls (delays, validations)
+are hidden. The token types in the legend are not filters: nearly every call has input and
+output, so they would not narrow anything.
+
+The filter is `UsageFilter` in `usageSummary.ts`; the view's state is in
+`src/views/logs/useLogUsage.ts`.
+
+## The log's header
+
+`src/views/logs/LogsHeader.tsx` holds the title, the actions on the whole log and the tabs.
+Clear is the leftmost action and asks once on the button itself ("Clear all 25 entries?")
+before it empties the log. A tab other than All and Calls appears only when the log has entries
+of its kind, which keeps the tabs on one row on a phone; with all six present the row scrolls
+sideways. Only Errors carries a count.
 
 ## Calls logged before costs were kept
 
