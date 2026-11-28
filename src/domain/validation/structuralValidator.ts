@@ -8,7 +8,7 @@ import { decodeXmlEntities, extractTag, extractTagList } from '@/utils';
 import type { CastMember, Story } from '@/types';
 import { ensureCharacter, resolveCharacter } from '@/domain/story';
 import { analyzeAudioDramaScriptFormatting, isAudioDramaScriptText } from '@/domain/audio';
-import { DEFAULT_SLOP_CONFIG, scanTextForSlop } from '@/domain/slop';
+import { DEFAULT_SLOP_CONFIG, dialogueShapeAdvisories, isDialogueShapeHit, scanTextForSlop } from '@/domain/slop';
 import type { SlopConfig } from '@/types/slop';
 
 export interface StructuralValidationResult {
@@ -612,14 +612,16 @@ export function validateStructuralOutput(
                         `Writing Agent (Clustered Slop Flags): Repeated AI-tic fallback(s) detected: ${topCats}.`
                     );
                 }
-                if (slopCheck.densityHits.length > 0 && advisoriesAdded.length < 6) {
-                    slopCheck.densityHits.slice(0, 6 - advisoriesAdded.length).forEach((dh) => {
+                const otherDensityHits = slopCheck.densityHits.filter((dh) => !isDialogueShapeHit(dh));
+                if (otherDensityHits.length > 0 && advisoriesAdded.length < 6) {
+                    otherDensityHits.slice(0, 6 - advisoriesAdded.length).forEach((dh) => {
                         advisoriesAdded.push(
                             `Writing Agent (${dh.categoryTitle}): "${dh.match}" — verify pacing and punctuation variety.`
                         );
                     });
                 }
                 advisoriesAdded.slice(0, 6).forEach((w) => warnings.push(w));
+                dialogueShapeAdvisories(slopCheck.densityHits).forEach((w) => warnings.push(`Writing Agent: ${w}`));
             }
         } else {
             errors.push('Writing Agent: Prose is too short or missing.');

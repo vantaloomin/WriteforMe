@@ -32,6 +32,16 @@ export {
     type SlopAllowlistStory
 } from './configEditing';
 export {
+    detectDialoguePingPong,
+    detectDialogueEchoes,
+    dialogueShapeAdvisories,
+    isDialogueShapeHit,
+    splitDialogueParagraphs,
+    type DialogueEcho,
+    type DialogueParagraph,
+    type PingPongRun
+} from './dialogueShape';
+export {
     detectRepeatedPhrases,
     phraseHabitsLine,
     recentScenePassages,
