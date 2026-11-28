@@ -7,7 +7,6 @@
 import type React from 'react';
 import { CORNER_DEFAULT_STORY_ROLE, VIEW_LABELS } from '@/config';
 import {
-    CharacterCard,
     EditorialSubNav,
     Plus,
     Upload,
@@ -25,6 +24,7 @@ import {
 import { splitCharacterRole, withShortRole } from '@/domain/cast';
 import { CAST_FILE_ACCEPT, useCastImport } from '@/hooks';
 import { CastBoardPanel } from './CastBoardPanel';
+import { CastCards } from './CastCards';
 import { DeadRecordPanel } from './DeadRecordPanel';
 
 export type CastCharacterRecord = CharacterCardCharacter & {
@@ -415,40 +415,22 @@ export function CastView({
             <CastBoardPanel story={story} setStory={(updater) => setStory(updater)} />
             <DeadRecordPanel story={story} setStory={(updater) => setStory(updater)} />
 
-            {/* Cast Cards Grid */}
-            <div className="flex flex-col gap-6">
-                {story.cast &&
-                    story.cast.map((c, i) => (
-                        <CharacterCard
-                            key={i}
-                            c={c}
-                            story={story}
-                            onAuditionVoice={testAuditionCharacterVoice}
-                            onRecalibrateVoice={(target) =>
-                                testAuditionCharacterVoice(target, { forceRecalibrate: true })
-                            }
-                            onRerollVoiceSeed={handleRerollCharacterSeed}
-                            isAuditioningVoice={isAuditioningVoice}
-                            isAnyAudioPlaying={isAnyAudioPlaying}
-                            stopAllAudioPlayback={stopAllAudioPlayback}
-                            portraitSrc={loadedImages.portraits?.[c.id || ''] ?? null}
-                            portraitLoading={!!portraitLoading[c.id || '']}
-                            onGeneratePortrait={generateCharacterPortrait}
-                            onUploadPortrait={uploadCharacterPortrait}
-                            onRemovePortrait={removeCharacterPortrait}
-                            onEdit={(field, title, val) => {
-                                if (field === 'reset_reference_text') {
-                                    handleResetCharacterReferenceText(c);
-                                    return;
-                                }
-                                openEditModal(title, val || '', (newValue) =>
-                                    saveCastField(c, i, field, newValue)
-                                );
-                            }}
-                            onEditInline={(field, value) => saveCastField(c, i, field, value)}
-                        />
-                    ))}
-            </div>
+            <CastCards
+                story={story}
+                loadedImages={loadedImages}
+                portraitLoading={portraitLoading}
+                isAnyAudioPlaying={isAnyAudioPlaying}
+                isAuditioningVoice={isAuditioningVoice}
+                openEditModal={openEditModal}
+                saveCastField={saveCastField}
+                generateCharacterPortrait={generateCharacterPortrait}
+                uploadCharacterPortrait={uploadCharacterPortrait}
+                removeCharacterPortrait={removeCharacterPortrait}
+                handleRerollCharacterSeed={handleRerollCharacterSeed}
+                handleResetCharacterReferenceText={handleResetCharacterReferenceText}
+                testAuditionCharacterVoice={testAuditionCharacterVoice}
+                stopAllAudioPlayback={stopAllAudioPlayback}
+            />
         </div>
     );
 }

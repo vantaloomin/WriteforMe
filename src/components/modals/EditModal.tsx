@@ -38,7 +38,7 @@ export function EditModal({ isOpen, title, value = '', onConfirm, onCancel }: Ed
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-stone-900/40 backdrop-blur-sm p-4 animate-fade-in"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-stone-900/40 backdrop-blur-sm p-4 animate-fade-in"
             onClick={onCancel}
         >
             <div
