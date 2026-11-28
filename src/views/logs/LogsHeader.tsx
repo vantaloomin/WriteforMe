@@ -1,15 +1,17 @@
 /**
  * @module views/logs/LogsHeader
  * The top of the log: its name, the actions on the whole log (clear, copy, export) and the tabs
- * that pick a kind of entry. A tab is shown only when the log has entries of its kind, so a
- * phone gets one row. Clearing asks once, on the button itself, and sits at the far left.
+ * that pick a kind of entry. A tab is shown only when the log has entries of its kind. All
+ * five fit one row on a phone: waits between retries have no tab of their own, because they
+ * only mean something beside the call that caused them, under All. Clearing asks once, on the
+ * button itself, and sits at the far left.
  */
 
 import { useState } from 'react';
 import { ChevronDown, Copy, Download, History, Trash2 } from '@/components/icons';
 import { VIEW_LABELS } from '@/config';
 
-export const LOG_TABS = ['all', 'calls', 'errors', 'validations', 'delays', 'audio'] as const;
+export const LOG_TABS = ['all', 'calls', 'errors', 'validations', 'audio'] as const;
 export type LogTab = (typeof LOG_TABS)[number];
 
 export interface LogTabEntry {
@@ -29,7 +31,6 @@ export function inLogTab(entry: LogTabEntry, tab: string): boolean {
     if (tab === 'calls') return !entry.isDelay && !entry.isValidation && !entry.isAudio && !failed;
     if (tab === 'errors') return failed;
     if (tab === 'validations') return Boolean(entry.isValidation);
-    if (tab === 'delays') return Boolean(entry.isDelay);
     if (tab === 'audio') {
         return Boolean(
             entry.isAudio ||
@@ -137,7 +138,7 @@ export function LogsHeader({
                             key={tab}
                             onClick={() => setLogFilter(tab)}
                             aria-pressed={logFilter === tab}
-                            className={`min-h-8 px-2.5 sm:px-3 rounded-lg font-bold capitalize whitespace-nowrap shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${
+                            className={`min-h-11 sm:min-h-8 px-2 sm:px-3 rounded-lg font-bold capitalize whitespace-nowrap shrink-0 transition-colors cursor-pointer flex items-center gap-1.5 ${
                                 logFilter === tab
                                     ? 'bg-btn text-btn-ink'
                                     : 'text-ink-600 hover:text-ink-900 hover:bg-lift'
@@ -146,7 +147,7 @@ export function LogsHeader({
                             {tab}
                             {tab === 'errors' && errors > 0 && (
                                 <span className="text-[10px] font-mono font-bold bg-rose-600 text-white px-1.5 rounded-full">
-                                    {errors}
+                                    {errors > 99 ? '99+' : errors}
                                 </span>
                             )}
                         </button>

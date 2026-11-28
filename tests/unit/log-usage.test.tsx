@@ -4,10 +4,13 @@ import { createRoot, type Root } from 'react-dom/client';
 import {
     formatShare,
     formatTokenCount,
+    DEFAULT_STEP_SORT,
     filterUsage,
     formatVerboseLogEntry,
     matchesUsageFilter,
+    nextStepSort,
     NO_USAGE_FILTER,
+    sortSteps,
     stepNameOf,
     summarizeUsage,
     toggleUsageFilter,
@@ -157,6 +160,31 @@ describe('usage filter', () => {
     });
 });
 
+describe('step sorting', () => {
+    const steps = summarizeUsage([
+        claude({ function: 'beta', promptTokens: 30_000, costUsd: 0.1 }),
+        claude({ function: 'Alpha', costUsd: 0.9 }),
+        claude({ function: 'Alpha', costUsd: 0.9 }),
+        claude({ function: 'Gamma', promptTokens: 1_000, cachedTokens: 0, cacheWriteTokens: 0, costUsd: null, provider: 'koboldcpp' })
+    ]).steps;
+    const names = (sort: Parameters<typeof sortSteps>[1]): string[] => sortSteps(steps, sort).map((s) => s.name);
+
+    it('starts largest first and sorts each column both ways', () => {
+        expect(names(DEFAULT_STEP_SORT)).toEqual(['beta', 'Alpha', 'Gamma']);
+        expect(names({ key: 'name', descending: false })).toEqual(['Alpha', 'beta', 'Gamma']);
+        expect(names({ key: 'name', descending: true })).toEqual(['Gamma', 'beta', 'Alpha']);
+        expect(names({ key: 'calls', descending: true })).toEqual(['Alpha', 'beta', 'Gamma']);
+        expect(names({ key: 'cost', descending: true })).toEqual(['Alpha', 'beta', 'Gamma']);
+        expect(names({ key: 'cost', descending: false })).toEqual(['Gamma', 'beta', 'Alpha']);
+    });
+
+    it('flips the direction on the same column and starts a new one where it reads best', () => {
+        expect(nextStepSort(DEFAULT_STEP_SORT, 'tokens')).toEqual({ key: 'tokens', descending: false });
+        expect(nextStepSort(DEFAULT_STEP_SORT, 'name')).toEqual({ key: 'name', descending: false });
+        expect(nextStepSort({ key: 'name', descending: false }, 'cost')).toEqual({ key: 'cost', descending: true });
+    });
+});
+
 describe('withLogCost', () => {
     const old = { status: 'success', provider: 'anthropic', modelUsed: 'claude-opus-5-5', promptTokens: 1_000_000, responseTokens: 0 };
 
@@ -266,6 +294,25 @@ describe('log usage views', () => {
         toggle();
         click('[data-testid="log-usage-clear"]');
         expect(text('log-usage-calls')).toContain('in 3 calls');
+    });
+
+    it('sorts the table when a column heading is clicked, and marks the column', () => {
+        localStorage.clear();
+        const entries = [claude({ function: 'Zeta' }), claude({ function: 'Alpha', promptTokens: 90_000 })];
+        act(() => root.render(<LogUsage entries={entries} />));
+        toggle();
+        const first = (): string | null | undefined => container.querySelector('tbody tr td')?.textContent;
+        const sortOf = (key: string): string | null | undefined =>
+            container.querySelector(`[data-testid="log-usage-sort-${key}"]`)?.closest('th')?.getAttribute('aria-sort');
+        expect(first()).toBe('Alpha');
+        expect(sortOf('tokens')).toBe('descending');
+        click('[data-testid="log-usage-sort-tokens"]');
+        expect(first()).toBe('Zeta');
+        expect(sortOf('tokens')).toBe('ascending');
+        click('[data-testid="log-usage-sort-name"]');
+        expect(first()).toBe('Alpha');
+        expect(sortOf('name')).toBe('ascending');
+        expect(sortOf('tokens')).toBeNull();
     });
 
     it('shows the Model column only when more than one model ran', () => {

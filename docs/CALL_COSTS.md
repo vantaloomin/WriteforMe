@@ -32,9 +32,10 @@ The filter is `UsageFilter` in `usageSummary.ts`; the view's state is in
 
 `src/views/logs/LogsHeader.tsx` holds the title, the actions on the whole log and the tabs.
 Clear is the leftmost action and asks once on the button itself ("Clear all 25 entries?")
-before it empties the log. A tab other than All and Calls appears only when the log has entries
-of its kind, which keeps the tabs on one row on a phone; with all six present the row scrolls
-sideways. Only Errors carries a count.
+before it empties the log. The tabs are All, Calls, Errors, Validations and Audio; the last three appear only when the log
+has entries of their kind. All five fit one row at 390px. There is no Delays tab: a wait
+between retries only means something beside the call that caused it, and it is still listed
+under All. Only Errors carries a count, capped at "99+".
 
 ## Calls logged before costs were kept
 

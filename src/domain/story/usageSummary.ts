@@ -163,6 +163,36 @@ export function summarizeUsage(entries: ReadonlyArray<UsageEntry>): UsageSummary
     return { parts, tokens, calls, cost, steps, models: [...byModel.values()].sort(largestFirst) };
 }
 
+export const STEP_SORT_KEYS = ['name', 'model', 'calls', 'tokens', 'cost'] as const;
+export type StepSortKey = (typeof STEP_SORT_KEYS)[number];
+export interface StepSort {
+    key: StepSortKey;
+    descending: boolean;
+}
+
+/** How the table starts: the step that used the most first. */
+export const DEFAULT_STEP_SORT: StepSort = { key: 'tokens', descending: true };
+
+/** The same column again flips the direction; a new column starts where it reads best. */
+export function nextStepSort(current: StepSort, key: StepSortKey): StepSort {
+    if (current.key === key) return { key, descending: !current.descending };
+    return { key, descending: key !== 'name' && key !== 'model' };
+}
+
+/** Steps in the chosen order. Ties, and steps with no cost, fall back to largest first. */
+export function sortSteps(steps: ReadonlyArray<StepUsage>, sort: StepSort): StepUsage[] {
+    const text = (a: string, b: string): number => a.localeCompare(b, undefined, { sensitivity: 'base' });
+    const compare = (a: StepUsage, b: StepUsage): number => {
+        if (sort.key === 'name') return text(a.name, b.name);
+        if (sort.key === 'model') return text(a.models[0] || '', b.models[0] || '');
+        if (sort.key === 'calls') return a.calls - b.calls;
+        if (sort.key === 'cost') return (a.cost?.usd ?? -1) - (b.cost?.usd ?? -1);
+        return a.tokens - b.tokens;
+    };
+    const direction = sort.descending ? -1 : 1;
+    return [...steps].sort((a, b) => direction * compare(a, b) || b.tokens - a.tokens || text(a.name, b.name));
+}
+
 /** What the reader picked in the summary. An empty list means "any". */
 export interface UsageFilter {
     steps: string[];

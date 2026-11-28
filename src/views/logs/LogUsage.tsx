@@ -14,14 +14,18 @@ import { useState } from 'react';
 import { ChevronDown } from '@/components/icons';
 import { STORAGE_KEYS } from '@/config';
 import {
+    DEFAULT_STEP_SORT,
     filterUsage,
     formatCallCost,
     formatShare,
     formatTokenCount,
     isUsageFilterActive,
+    nextStepSort,
     NO_USAGE_FILTER,
+    sortSteps,
     toggleUsageFilter,
     USAGE_PARTS,
+    type StepSortKey,
     type UsageEntry,
     type UsageFilter,
     type UsageFilterKind,
@@ -76,6 +80,7 @@ export interface LogUsageProps {
 export function LogUsage({ entries, filter = NO_USAGE_FILTER, onFilter }: LogUsageProps) {
     const [open, setOpen] = useState(readOpen);
     const [showAll, setShowAll] = useState(false);
+    const [sort, setSort] = useState(DEFAULT_STEP_SORT);
     const { all, shown } = filterUsage(entries, filter);
     if (all.calls <= 0) return null;
 
@@ -84,9 +89,26 @@ export function LogUsage({ entries, filter = NO_USAGE_FILTER, onFilter }: LogUsa
     const describe = (part: UsagePart): string =>
         `${PART_LABELS[part]}: ${shown.parts[part].toLocaleString()} tokens, ${formatShare(shown.parts[part] / (shown.tokens || 1))}`;
     // A picked step stays in view even when it is not among the largest.
+    const sorted = sortSteps(all.steps, sort);
     const steps = showAll
-        ? all.steps
-        : all.steps.filter((step, index) => index < STEPS_SHOWN || filter.steps.includes(step.name));
+        ? sorted
+        : sorted.filter((step, index) => index < STEPS_SHOWN || filter.steps.includes(step.name));
+    /** A column heading that sorts the table; the arrow marks the column in use and its direction. */
+    const heading = (key: StepSortKey, label: string, cell: string) => (
+        <th className={`font-normal ${cell}`} aria-sort={sort.key !== key ? undefined : sort.descending ? 'descending' : 'ascending'}>
+            <button
+                type="button"
+                onClick={() => setSort(nextStepSort(sort, key))}
+                className={`inline-flex items-center gap-1 py-1.5 px-2 hover:text-ink-900 ${cell.includes('text-right') ? 'flex-row-reverse' : ''} ${sort.key === key ? 'text-ink-900 font-bold' : ''}`}
+                data-testid={`log-usage-sort-${key}`}
+            >
+                {label}
+                {sort.key === key && (
+                    <ChevronDown size={12} className={sort.descending ? '' : 'rotate-180'} aria-hidden="true" />
+                )}
+            </button>
+        </th>
+    );
     const anyCost = all.cost !== null;
     const manyModels = all.models.length > 1;
     const toggle = (): void => {
@@ -208,13 +230,11 @@ export function LogUsage({ entries, filter = NO_USAGE_FILTER, onFilter }: LogUsa
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="text-xs text-ink-500 border-b border-edge">
-                                <th className="text-left font-normal py-1.5 px-2">Step</th>
-                                {manyModels && (
-                                    <th className="text-left font-normal py-1.5 px-2 hidden md:table-cell">Model</th>
-                                )}
-                                <th className="text-right font-normal py-1.5 px-2 hidden sm:table-cell">Calls</th>
-                                <th className="text-right font-normal py-1.5 px-2">Tokens</th>
-                                {anyCost && <th className="text-right font-normal py-1.5 px-2">Cost</th>}
+                                {heading('name', 'Step', 'text-left')}
+                                {manyModels && heading('model', 'Model', 'text-left hidden md:table-cell')}
+                                {heading('calls', 'Calls', 'text-right hidden sm:table-cell')}
+                                {heading('tokens', 'Tokens', 'text-right')}
+                                {anyCost && heading('cost', 'Cost', 'text-right')}
                                 <th className="text-right font-normal py-1.5 px-2 hidden sm:table-cell">Share</th>
                             </tr>
                         </thead>
