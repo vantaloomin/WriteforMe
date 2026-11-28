@@ -7,6 +7,7 @@ export * from './progress';
 export * from './coverTypography';
 export * from './logFormatter';
 export * from './callCost';
+export * from './usageSummary';
 export * from './stats';
 export * from './summaryCheck';
 export * from './directivePlanning';

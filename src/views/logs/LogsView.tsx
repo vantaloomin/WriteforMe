@@ -29,7 +29,8 @@ import {
 } from '@/components/icons';
 import { formatAllVerboseLogs, formatVerboseLogEntry, type VerboseLogEntry } from '@/domain/story';
 import { copyVerboseLogToClipboard, downloadVerboseLogFile } from '@/services/browser';
-import { LogCost, LogTotals } from './LogTotals';
+import { LogCacheTokens, LogCost } from './LogCallFigures';
+import { LogUsage } from './LogUsage';
 
 export type LogFilterKey = 'all' | 'calls' | 'validations' | 'delays' | 'audio' | 'errors' | string;
 
@@ -43,7 +44,8 @@ export interface LogsViewEntry extends VerboseLogEntry {
     category?: string;
     tierName?: string;
     actionTaken?: string;
-    cachedTokens?: number;
+    cachedTokens?: number | null;
+    cacheWriteTokens?: number | null;
     costUsd?: number | null;
     costExact?: boolean;
     routedProvider?: string;
@@ -151,7 +153,6 @@ export function LogsView({
                     <span className="text-xs font-mono font-bold text-ink-500 bg-mist-100 px-3 py-1 rounded-full border border-edge-strong">
                         {promptLog.length} entries
                     </span>
-                    <LogTotals entries={promptLog} />
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5">
@@ -282,6 +283,8 @@ export function LogsView({
                     </div>
                 </div>
             </div>
+
+            <LogUsage entries={promptLog} />
 
             <div className="space-y-4">
                 {promptLog.length === 0 ? (
@@ -804,31 +807,7 @@ export function LogsView({
                                                         </span>
                                                     </div>
                                                 )}
-                                            {entry.cachedTokens !== undefined &&
-                                                entry.cachedTokens > 0 && (
-                                                    <div className="flex items-center gap-1 text-sage-800 font-bold bg-sage-tint px-2 py-0.5 rounded-md border border-sage-edge">
-                                                        Cached:{' '}
-                                                        <span className="font-mono">
-                                                            {entry.cachedTokens.toLocaleString()} (
-                                                            {entry.promptTokens && entry.promptTokens > 0
-                                                                ? Math.min(
-                                                                      100,
-                                                                      Math.round(
-                                                                          (entry.cachedTokens /
-                                                                              entry.promptTokens) *
-                                                                              100
-                                                                      )
-                                                                  )
-                                                                : 0}
-                                                            %)
-                                                        </span>
-                                                        {entry.routedProvider && (
-                                                            <span className="text-ink-500 font-normal font-sans ml-0.5">
-                                                                via {entry.routedProvider}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                )}
+                                            <LogCacheTokens entry={entry} />
                                             {entry.thinkingTokens !== null &&
                                             entry.thinkingTokens !== undefined ? (
                                                 <div className="flex items-center gap-1 text-plum-900 font-bold">

@@ -236,9 +236,12 @@ describe('views/reader, views/logs, and recoverOrphanedLogs', () => {
         );
 
         expect(container.textContent).toContain('2 entries');
-        expect(container.textContent).toContain('Sent: 500 tok');
-        expect(container.textContent).toContain('Think: 120 tok');
-        expect(container.textContent).toContain('Resp: 300 tok');
+        const usagePart = (part: string): string | null | undefined =>
+            container.querySelector(`[data-testid="log-usage-${part}"]`)?.textContent;
+        expect(container.textContent).toContain('800 tokens in 1 call');
+        expect(usagePart('input')).toBe('500');
+        expect(usagePart('thinking')).toBe('120');
+        expect(usagePart('output')).toBe('180');
         expect(container.textContent).toContain('ECONNREFUSED');
 
         const dossierBtn = Array.from(container.querySelectorAll('button')).find((b) =>
