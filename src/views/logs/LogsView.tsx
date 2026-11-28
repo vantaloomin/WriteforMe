@@ -155,7 +155,7 @@ export function LogsView({
                     </span>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2.5">
+                <div className="flex flex-wrap items-center gap-2.5 min-w-0 max-w-full">
                     {/* Quick Verbose Copy & Export Toolbar */}
                     <div className="flex items-center gap-1.5 bg-surface p-1 rounded-xl border border-edge-strong shadow-2xs">
                         <button
@@ -227,54 +227,53 @@ export function LogsView({
                     </div>
 
                     {/* Log Filter Pills */}
-                    <div className="flex flex-wrap items-center gap-1.5 bg-surface p-1 rounded-xl border border-edge-strong shadow-2xs text-xs">
-                        {(['all', 'calls', 'validations', 'delays', 'audio', 'errors'] as const).map(
-                            (filterKey) => {
-                                const errCount = promptLog.filter(
-                                    (e) =>
-                                        e.status === 'error' ||
-                                        e.status === 'validation_failed' ||
-                                        e.isError
-                                ).length;
-                                const valCount = promptLog.filter((e) => e.isValidation).length;
-                                const audioCount = promptLog.filter(
-                                    (e) =>
-                                        e.isAudio || e.category === 'audio' || e.stepId === 22
-                                ).length;
-                                return (
-                                    <button
-                                        key={filterKey}
-                                        onClick={() => setLogFilter(filterKey)}
-                                        className={`px-3 py-1.5 rounded-lg font-bold capitalize transition-all cursor-pointer flex items-center gap-1.5 ${
-                                            logFilter === filterKey
-                                                ? 'bg-btn text-btn-ink shadow-2xs'
-                                                : 'text-ink-600 hover:text-ink-900 hover:bg-lift'
-                                        }`}
-                                    >
-                                        <span>{filterKey}</span>
-                                        {filterKey === 'errors' && errCount > 0 && (
-                                            <span className="text-[10px] font-mono font-bold bg-rose-600 text-white px-1.5 py-0.2 rounded-full shadow-2xs">
-                                                {errCount}
-                                            </span>
-                                        )}
-                                        {filterKey === 'validations' && valCount > 0 && (
-                                            <span className="text-[10px] font-mono text-ink-500 bg-mist-200/80 px-1.5 py-0.2 rounded-full">
-                                                {valCount}
-                                            </span>
-                                        )}
-                                        {filterKey === 'audio' && audioCount > 0 && (
-                                            <span className="text-[10px] font-mono text-plum-700 bg-plum-tint px-1.5 py-0.2 rounded-full border border-plum-edge">
-                                                {audioCount}
-                                            </span>
-                                        )}
-                                    </button>
-                                );
-                            }
-                        )}
+                    <div className="flex items-center min-w-0 max-w-full bg-surface p-1 rounded-xl border border-edge-strong shadow-2xs text-xs">
+                        <div className="flex flex-nowrap items-center gap-1 sm:gap-1.5 min-w-0 overflow-x-auto no-scrollbar touch-scroll">
+                            {(['all', 'calls', 'errors', 'validations', 'delays', 'audio'] as const).map(
+                                (filterKey) => {
+                                    const errCount = promptLog.filter(
+                                        (e) => e.status === 'error' || e.status === 'validation_failed' || e.isError
+                                    ).length;
+                                    const valCount = promptLog.filter((e) => e.isValidation).length;
+                                    const audioCount = promptLog.filter(
+                                        (e) =>
+                                            e.isAudio || e.category === 'audio' || e.stepId === 22
+                                    ).length;
+                                    return (
+                                        <button
+                                            key={filterKey}
+                                            onClick={() => setLogFilter(filterKey)}
+                                            className={`px-2 sm:px-3 py-1.5 rounded-lg font-bold capitalize whitespace-nowrap shrink-0 transition-all cursor-pointer flex items-center gap-1.5 ${
+                                                logFilter === filterKey
+                                                    ? 'bg-btn text-btn-ink shadow-2xs'
+                                                    : 'text-ink-600 hover:text-ink-900 hover:bg-lift'
+                                            }`}
+                                        >
+                                            <span>{filterKey}</span>
+                                            {filterKey === 'errors' && errCount > 0 && (
+                                                <span className="text-[10px] font-mono font-bold bg-rose-600 text-white px-1.5 py-0.2 rounded-full shadow-2xs">
+                                                    {errCount}
+                                                </span>
+                                            )}
+                                            {filterKey === 'validations' && valCount > 0 && (
+                                                <span className="text-[10px] font-mono text-ink-500 bg-mist-200/80 px-1.5 py-0.2 rounded-full">
+                                                    {valCount}
+                                                </span>
+                                            )}
+                                            {filterKey === 'audio' && audioCount > 0 && (
+                                                <span className="text-[10px] font-mono text-plum-700 bg-plum-tint px-1.5 py-0.2 rounded-full border border-plum-edge">
+                                                    {audioCount}
+                                                </span>
+                                            )}
+                                        </button>
+                                    );
+                                }
+                            )}
+                        </div>
                         {promptLog.length > 0 && (
                             <button
                                 onClick={() => setPromptLog([])}
-                                className="px-2.5 py-1.5 rounded-lg text-ink-400 hover:text-blush-600 hover:bg-blush-tint transition-colors ml-1 cursor-pointer"
+                                className="px-2.5 py-1.5 rounded-lg text-ink-400 hover:text-blush-600 hover:bg-blush-tint transition-colors ml-1 shrink-0 cursor-pointer"
                                 title="Clear logs"
                             >
                                 <Trash2 size={14} />
