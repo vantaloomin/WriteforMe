@@ -175,7 +175,8 @@ describe('step sorting', () => {
         expect(names({ key: 'name', descending: true })).toEqual(['Gamma', 'beta', 'Alpha']);
         expect(names({ key: 'calls', descending: true })).toEqual(['Alpha', 'beta', 'Gamma']);
         expect(names({ key: 'cost', descending: true })).toEqual(['Alpha', 'beta', 'Gamma']);
-        expect(names({ key: 'cost', descending: false })).toEqual(['Gamma', 'beta', 'Alpha']);
+        // No cost is not the cheapest: it stays last either way.
+        expect(names({ key: 'cost', descending: false })).toEqual(['beta', 'Alpha', 'Gamma']);
     });
 
     it('flips the direction on the same column and starts a new one where it reads best', () => {
@@ -313,6 +314,17 @@ describe('log usage views', () => {
         expect(first()).toBe('Alpha');
         expect(sortOf('name')).toBe('ascending');
         expect(sortOf('tokens')).toBeNull();
+    });
+
+    it('shows every step once the order is not largest first', () => {
+        localStorage.clear();
+        const entries = Array.from({ length: 7 }, (_, i) => claude({ function: `Step ${String.fromCharCode(65 + i)}` }));
+        act(() => root.render(<LogUsage entries={entries} />));
+        toggle();
+        expect(container.querySelectorAll('tbody tr')).toHaveLength(5);
+        click('[data-testid="log-usage-sort-name"]');
+        expect(container.querySelectorAll('tbody tr')).toHaveLength(7);
+        expect(text('log-usage-more')).toBeUndefined();
     });
 
     it('shows the Model column only when more than one model ran', () => {

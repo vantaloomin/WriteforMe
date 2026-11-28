@@ -28,6 +28,14 @@ output, so they would not narrow anything.
 The filter is `UsageFilter` in `usageSummary.ts`; the view's state is in
 `src/views/logs/useLogUsage.ts`.
 
+## Sorting the steps
+
+The Step, Model, Calls, Tokens and Cost headings sort the table; the same heading again flips
+the direction, and an arrow marks the heading in use. It starts largest first, cut to five
+steps with "Show all". Any other order lists every step, so the largest is never hidden. A
+step with no cost stays last in both directions. `sortSteps()` and `nextStepSort()` are in
+`usageSummary.ts`. The order is not remembered between visits.
+
 ## The log's header
 
 `src/views/logs/LogsHeader.tsx` holds the title, the actions on the whole log and the tabs.
