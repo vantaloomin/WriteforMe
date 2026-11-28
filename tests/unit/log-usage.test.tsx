@@ -1,152 +1,237 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { act } from 'react';
-import { createRoot, type Root } from 'react-dom/client';
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import {
-    formatShare,
-    formatTokenCount,
-    formatVerboseLogEntry,
-    stepNameOf,
-    summarizeUsage,
-    usagePartsOf
-} from '@/domain/story';
-import { LogCacheTokens } from '@/views/logs/LogCallFigures';
-import { LogUsage } from '@/views/logs/LogUsage';
+  formatShare,
+  formatTokenCount,
+  formatVerboseLogEntry,
+  stepNameOf,
+  summarizeUsage,
+  usagePartsOf,
+} from "@/domain/story";
+import { LogCacheTokens } from "@/views/logs/LogCallFigures";
+import { LogUsage } from "@/views/logs/LogUsage";
 
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+(
+  globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 const claude = (over: Record<string, unknown> = {}) => ({
-    function: 'Lore Section Distiller 21/38',
-    provider: 'anthropic',
-    promptTokens: 10_000,
-    cachedTokens: 6_000,
-    cacheWriteTokens: 1_000,
-    responseTokens: 2_000,
-    thinkingTokens: 500,
-    costUsd: 0.05,
-    costExact: false,
-    ...over
+  function: "Lore Section Distiller 21/38",
+  provider: "anthropic",
+  promptTokens: 10_000,
+  cachedTokens: 6_000,
+  cacheWriteTokens: 1_000,
+  responseTokens: 2_000,
+  thinkingTokens: 500,
+  costUsd: 0.05,
+  costExact: false,
+  ...over,
 });
 
-describe('usagePartsOf', () => {
-    it('splits a prompt into plain input, cache write and cache read without overlap', () => {
-        expect(usagePartsOf(claude())).toEqual({
-            input: 3_000,
-            cacheWrite: 1_000,
-            cacheRead: 6_000,
-            thinking: 500,
-            output: 1_500
-        });
+describe("usagePartsOf", () => {
+  it("splits a prompt into plain input, cache write and cache read without overlap", () => {
+    expect(usagePartsOf(claude())).toEqual({
+      input: 3_000,
+      cacheWrite: 1_000,
+      cacheRead: 6_000,
+      thinking: 500,
+      output: 1_500,
     });
+  });
 
-    it('adds thinking on top of the response only where the provider reports it apart', () => {
-        const parts = usagePartsOf({ provider: 'gemini', promptTokens: 100, responseTokens: 40, thinkingTokens: 60 });
-        expect(parts.thinking).toBe(60);
-        expect(parts.output).toBe(40);
+  it("adds thinking on top of the response only where the provider reports it apart", () => {
+    const parts = usagePartsOf({
+      provider: "gemini",
+      promptTokens: 100,
+      responseTokens: 40,
+      thinkingTokens: 60,
     });
+    expect(parts.thinking).toBe(60);
+    expect(parts.output).toBe(40);
+  });
 
-    it('never goes negative on odd counts', () => {
-        const parts = usagePartsOf({ promptTokens: 100, cachedTokens: 900, cacheWriteTokens: 50, responseTokens: 10, thinkingTokens: 80 });
-        expect(parts).toEqual({ input: 0, cacheWrite: 0, cacheRead: 100, thinking: 10, output: 0 });
+  it("never goes negative on odd counts", () => {
+    const parts = usagePartsOf({
+      promptTokens: 100,
+      cachedTokens: 900,
+      cacheWriteTokens: 50,
+      responseTokens: 10,
+      thinkingTokens: 80,
     });
+    expect(parts).toEqual({
+      input: 0,
+      cacheWrite: 0,
+      cacheRead: 100,
+      thinking: 10,
+      output: 0,
+    });
+  });
 });
 
-describe('stepNameOf', () => {
-    it('drops counters so repeated calls are one step', () => {
-        expect(stepNameOf('Lore Section Distiller 22/38')).toBe('Lore Section Distiller');
-        expect(stepNameOf('Lore Cluster Synthesizer L3.2')).toBe('Lore Cluster Synthesizer');
-        expect(stepNameOf('Writing Agent (Turn 2/8)')).toBe('Writing Agent');
-        expect(stepNameOf('Surgical Editor (AI Slop) (Pass 1/2, Attempt 2/3)')).toBe('Surgical Editor (AI Slop)');
-        expect(stepNameOf('')).toBe('Other');
-    });
+describe("stepNameOf", () => {
+  it("drops counters so repeated calls are one step", () => {
+    expect(stepNameOf("Lore Section Distiller 22/38")).toBe(
+      "Lore Section Distiller",
+    );
+    expect(stepNameOf("Lore Cluster Synthesizer L3.2")).toBe(
+      "Lore Cluster Synthesizer",
+    );
+    expect(stepNameOf("Writing Agent (Turn 2/8)")).toBe("Writing Agent");
+    expect(
+      stepNameOf("Surgical Editor (AI Slop) (Pass 1/2, Attempt 2/3)"),
+    ).toBe("Surgical Editor (AI Slop)");
+    expect(stepNameOf("")).toBe("Other");
+  });
 });
 
-describe('summarizeUsage', () => {
-    it('totals parts, cost and steps, and skips entries that used no tokens', () => {
-        const usage = summarizeUsage([
-            claude(),
-            claude({ function: 'Lore Section Distiller 22/38', costExact: true }),
-            claude({ function: 'Review', promptTokens: 1_000, cachedTokens: 0, cacheWriteTokens: 0, responseTokens: 200, thinkingTokens: 0, costUsd: null }),
-            { function: 'Delay' }
-        ]);
-        expect(usage.calls).toBe(3);
-        expect(usage.tokens).toBe(12_000 * 2 + 1_200);
-        expect(usage.parts.cacheRead).toBe(12_000);
-        expect(usage.parts.cacheWrite).toBe(2_000);
-        expect(usage.cost).toEqual({ usd: 0.1, exact: false, calls: 2 });
-        expect(usage.steps.map((s) => [s.name, s.calls])).toEqual([
-            ['Lore Section Distiller', 2],
-            ['Review', 1]
-        ]);
-        expect(usage.steps[1].cost).toBeNull();
-        expect(usage.steps[0].share + usage.steps[1].share).toBeCloseTo(1);
-    });
+describe("summarizeUsage", () => {
+  it("totals parts, cost and steps, and skips entries that used no tokens", () => {
+    const usage = summarizeUsage([
+      claude(),
+      claude({ function: "Lore Section Distiller 22/38", costExact: true }),
+      claude({
+        function: "Review",
+        promptTokens: 1_000,
+        cachedTokens: 0,
+        cacheWriteTokens: 0,
+        responseTokens: 200,
+        thinkingTokens: 0,
+        costUsd: null,
+      }),
+      { function: "Delay" },
+    ]);
+    expect(usage.calls).toBe(3);
+    expect(usage.tokens).toBe(12_000 * 2 + 1_200);
+    expect(usage.parts.cacheRead).toBe(12_000);
+    expect(usage.parts.cacheWrite).toBe(2_000);
+    expect(usage.cost).toEqual({ usd: 0.1, exact: false, calls: 2 });
+    expect(usage.steps.map((s) => [s.name, s.calls])).toEqual([
+      ["Lore Section Distiller", 2],
+      ["Review", 1],
+    ]);
+    expect(usage.steps[1].cost).toBeNull();
+    expect(usage.steps[0].share + usage.steps[1].share).toBeCloseTo(1);
+  });
 });
 
-describe('formatting', () => {
-    it('shortens token counts', () => {
-        expect(formatTokenCount(842)).toBe('842');
-        expect(formatTokenCount(308_100)).toBe('308K');
-        expect(formatTokenCount(41_800)).toBe('41.8K');
-        expect(formatTokenCount(2_000)).toBe('2K');
-        expect(formatTokenCount(11_600_000)).toBe('11.6M');
-        expect(formatTokenCount(999_900)).toBe('1M');
-    });
+describe("formatting", () => {
+  it("shortens token counts", () => {
+    expect(formatTokenCount(842)).toBe("842");
+    expect(formatTokenCount(308_100)).toBe("308K");
+    expect(formatTokenCount(41_800)).toBe("41.8K");
+    expect(formatTokenCount(2_000)).toBe("2K");
+    expect(formatTokenCount(11_600_000)).toBe("11.6M");
+    expect(formatTokenCount(999_900)).toBe("1M");
+  });
 
-    it('keeps a tiny share from reading as zero', () => {
-        expect(formatShare(0.24)).toBe('24%');
-        expect(formatShare(0.001)).toBe('<1%');
-        expect(formatShare(0)).toBe('0%');
-    });
+  it("keeps a tiny share from reading as zero", () => {
+    expect(formatShare(0.24)).toBe("24%");
+    expect(formatShare(0.001)).toBe("<1%");
+    expect(formatShare(0)).toBe("0%");
+  });
 
-    it('lists cache reads and writes in the exported dossier', () => {
-        const text = formatVerboseLogEntry(claude());
-        expect(text).toContain('Read From Cache:        6,000');
-        expect(text).toContain('Written To Cache:       1,000');
-        expect(formatVerboseLogEntry(claude({ cachedTokens: 0, cacheWriteTokens: null }))).not.toContain('Cache:');
-    });
+  it("lists cache reads and writes in the exported dossier", () => {
+    const text = formatVerboseLogEntry(claude());
+    expect(text).toContain("Read From Cache:        6,000");
+    expect(text).toContain("Written To Cache:       1,000");
+    expect(
+      formatVerboseLogEntry(
+        claude({ cachedTokens: 0, cacheWriteTokens: null }),
+      ),
+    ).not.toContain("Cache:");
+  });
 });
 
-describe('log usage views', () => {
-    let container: HTMLDivElement;
-    let root: Root;
-    beforeEach(() => {
-        container = document.createElement('div');
-        document.body.appendChild(container);
-        root = createRoot(container);
-    });
-    afterEach(() => {
-        act(() => root.unmount());
-        container.remove();
-    });
-    const text = (testId: string): string | undefined =>
-        container.querySelector(`[data-testid="${testId}"]`)?.textContent ?? undefined;
+describe("log usage views", () => {
+  let container: HTMLDivElement;
+  let root: Root;
+  beforeEach(() => {
+    container = document.createElement("div");
+    document.body.appendChild(container);
+    root = createRoot(container);
+  });
+  afterEach(() => {
+    act(() => root.unmount());
+    container.remove();
+  });
+  const text = (testId: string): string | undefined =>
+    container.querySelector(`[data-testid="${testId}"]`)?.textContent ??
+    undefined;
 
-    it('shows cache read and cache write as separate figures on a call', () => {
-        act(() => root.render(<LogCacheTokens entry={claude()} />));
-        expect(text('log-entry-cache-read')).toBe('Cache read: 6,000 (60%)');
-        expect(text('log-entry-cache-write')).toBe('Cache write: 1,000 (10%)');
-        act(() => root.render(<LogCacheTokens entry={claude({ cachedTokens: 0, cacheWriteTokens: null })} />));
-        expect(container.textContent).toBe('');
-    });
+  it("shows cache read and cache write as separate figures on a call", () => {
+    act(() => root.render(<LogCacheTokens entry={claude()} />));
+    expect(text("log-entry-cache-read")).toBe("Cache read: 6,000 (60%)");
+    expect(text("log-entry-cache-write")).toBe("Cache write: 1,000 (10%)");
+    act(() =>
+      root.render(
+        <LogCacheTokens
+          entry={claude({ cachedTokens: 0, cacheWriteTokens: null })}
+        />,
+      ),
+    );
+    expect(container.textContent).toBe("");
+  });
 
-    it('draws the summary with a legend, a cost and the steps', () => {
-        const entries = Array.from({ length: 7 }, (_, i) => claude({ function: `Step ${String.fromCharCode(65 + i)} 1/2` }));
-        act(() => root.render(<LogUsage entries={entries} />));
-        expect(text('log-usage-cacheRead')).toBe('42K');
-        expect(text('log-usage-cacheWrite')).toBe('7K');
-        expect(text('log-total-cost')).toBe('≈ $0.350');
-        expect(container.querySelectorAll('tbody tr')).toHaveLength(5);
-        const more = container.querySelector('button');
-        expect(more?.textContent).toBe('Show all 7 steps');
-        act(() => more?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
-        expect(container.querySelectorAll('tbody tr')).toHaveLength(7);
-    });
+  const toggle = (): void => {
+    const button = container.querySelector('[data-testid="log-usage-toggle"]');
+    act(() =>
+      button?.dispatchEvent(new MouseEvent("click", { bubbles: true })),
+    );
+  };
 
-    it('leaves out the cost column when nothing is priced, and draws nothing for an empty log', () => {
-        act(() => root.render(<LogUsage entries={[claude({ provider: 'koboldcpp', costUsd: null })]} />));
-        expect(container.querySelectorAll('thead th')).toHaveLength(4);
-        expect(text('log-total-cost')).toBeUndefined();
-        act(() => root.render(<LogUsage entries={[{ function: 'Delay' }]} />));
-        expect(container.textContent).toBe('');
-    });
+  it("starts closed with the totals and the bar, opens on a click and remembers it", () => {
+    localStorage.clear();
+    act(() => root.render(<LogUsage entries={[claude()]} />));
+    expect(text("log-total-cost")).toBe("≈ $0.050");
+    expect(container.querySelector('[role="img"]')).not.toBeNull();
+    expect(container.querySelector("table")).toBeNull();
+    expect(text("log-usage-cacheRead")).toBeUndefined();
+    toggle();
+    expect(container.querySelector("table")).not.toBeNull();
+    expect(
+      container
+        .querySelector('[data-testid="log-usage-toggle"]')
+        ?.getAttribute("aria-expanded"),
+    ).toBe("true");
+
+    act(() => root.render(<div />));
+    act(() => root.render(<LogUsage entries={[claude()]} />));
+    expect(container.querySelector("table")).not.toBeNull();
+    toggle();
+    expect(container.querySelector("table")).toBeNull();
+  });
+
+  it("draws the summary with a legend, a cost and the steps", () => {
+    localStorage.clear();
+    const entries = Array.from({ length: 7 }, (_, i) =>
+      claude({ function: `Step ${String.fromCharCode(65 + i)} 1/2` }),
+    );
+    act(() => root.render(<LogUsage entries={entries} />));
+    toggle();
+    expect(text("log-usage-cacheRead")).toBe("42K");
+    expect(text("log-usage-cacheWrite")).toBe("7K");
+    expect(text("log-total-cost")).toBe("≈ $0.350");
+    expect(container.querySelectorAll("tbody tr")).toHaveLength(5);
+    const more = container.querySelector("#log-usage-details > button");
+    expect(more?.textContent).toBe("Show all 7 steps");
+    act(() => more?.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+    expect(container.querySelectorAll("tbody tr")).toHaveLength(7);
+  });
+
+  it("leaves out the cost column when nothing is priced, and draws nothing for an empty log", () => {
+    localStorage.clear();
+    act(() =>
+      root.render(
+        <LogUsage
+          entries={[claude({ provider: "koboldcpp", costUsd: null })]}
+        />,
+      ),
+    );
+    toggle();
+    expect(container.querySelectorAll("thead th")).toHaveLength(4);
+    expect(text("log-total-cost")).toBeUndefined();
+    act(() => root.render(<LogUsage entries={[{ function: "Delay" }]} />));
+    expect(container.textContent).toBe("");
+  });
 });

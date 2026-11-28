@@ -2,7 +2,9 @@
 
 The top of the log is a usage summary: total tokens and cost, one bar split into input, cache
 write, cache read, thinking and output, and a table of the pipeline steps that used the most
-(`src/views/logs/LogUsage.tsx`, sums in `src/domain/story/usageSummary.ts`). Each finished
+(`src/views/logs/LogUsage.tsx`, sums in `src/domain/story/usageSummary.ts`). It starts closed,
+as the totals line and the bar; a click on that line opens the legend and the table, and the
+choice is remembered. Each finished
 model call shows what it cost, and its cache read and cache write counts when it has any. `≈ $0.076` is an estimate (tokens times a list price); a bare `$0.0041` is
 the charge the provider reported. Local providers (KoboldCPP, the Claude Code and Codex
 bridges), free models and models nobody has a price for show nothing.
