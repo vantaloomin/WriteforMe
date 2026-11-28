@@ -29,7 +29,9 @@ import {
     type VoiceCastMember
 } from '@/domain/audio';
 import { parseMarkdown } from '@/utils';
+import { CORNER_ROLE_OPTIONS, cornerRoleLabel, STORY_ROLE_PRESETS } from '@/config';
 import { EditButton } from '../common/EditButton';
+import { InlineChoiceField } from '../common/InlineChoiceField';
 import { CharacterSheetPanel } from './CharacterSheetPanel';
 
 export interface CharacterCardCharacter extends VoiceCastMember {
@@ -55,10 +57,15 @@ export interface CharacterCardCharacter extends VoiceCastMember {
     };
 }
 
+const TAG_CLASS =
+    'text-[10px] uppercase font-mono font-bold border px-2 py-0.5 rounded-full break-words min-w-0';
+
 export interface CharacterCardProps {
     c: CharacterCardCharacter | null;
     story?: AudioStoryLike | null;
     onEdit?: (fieldPath: string, label: string, currentValue?: string) => void;
+    /** Saves a short field edited in place on the card (name, role, corner role). */
+    onEditInline?: (fieldPath: string, value: string) => void;
     onAuditionVoice?: (
         char: CharacterCardCharacter,
         opts?: { forceRecalibrate?: boolean }
@@ -79,6 +86,7 @@ export function CharacterCard({
     c,
     story,
     onEdit,
+    onEditInline,
     onAuditionVoice,
     onRecalibrateVoice,
     onRerollVoiceSeed,
@@ -200,41 +208,48 @@ export function CharacterCard({
                     )}
                 </div>
                 <div className="flex-1 min-w-0 space-y-3">
-                    <div className="flex items-center gap-3">
+                    {onEditInline ? (
+                        <InlineChoiceField
+                            label="Name"
+                            value={c.name || ''}
+                            onCommit={(next) => onEditInline('name', next)}
+                            className="text-lg font-bold font-serif text-ink-900 px-1 -mx-1"
+                        />
+                    ) : (
                         <h3 className="text-lg font-bold font-serif text-ink-900 break-words min-w-0">
                             {c.name}
                         </h3>
-                        {onEdit && (
-                            <EditButton
-                                className="p-1.5 min-w-7 min-h-7 shrink-0"
-                                title="Name"
-                                value={c.name}
-                                onSave={() => onEdit('name', 'Name', c.name)}
-                            />
-                        )}
-                    </div>
+                    )}
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[10px] text-ink-600 uppercase font-mono font-bold bg-inset border border-edge-strong px-2 py-0.5 rounded-full break-words min-w-0">
-                            {c.role}
-                        </span>
-                        {onEdit && (
-                            <EditButton
-                                className="p-1.5 min-w-7 min-h-7 shrink-0"
-                                title="Role"
-                                value={c.role}
-                                onSave={() => onEdit('role', 'Role', c.role)}
-                            />
-                        )}
-                        <span className="text-[10px] text-gold-ink uppercase font-mono font-bold bg-gold-tint border border-gold-edge px-2 py-0.5 rounded-full break-words min-w-0">
-                            {c.corner_role ? c.corner_role.replace(/_/g, ' ') : 'CORNER ROLE'}
-                        </span>
-                        {onEdit && (
-                            <EditButton
-                                className="p-1.5 min-w-7 min-h-7 shrink-0"
-                                title="Corner Role (MAIN_CHARACTER, THE_CHALLENGER, THE_COMFORTER, THE_WARNING, SUPPORTING)"
-                                value={c.corner_role || ''}
-                                onSave={() => onEdit('corner_role', 'Corner Role', c.corner_role || '')}
-                            />
+                        {onEditInline ? (
+                            <>
+                                <InlineChoiceField
+                                    label="Role"
+                                    value={c.role || ''}
+                                    placeholder="Role"
+                                    options={STORY_ROLE_PRESETS}
+                                    onCommit={(next) => onEditInline('role', next)}
+                                    className={`${TAG_CLASS} text-ink-600 bg-inset border-edge-strong`}
+                                />
+                                <InlineChoiceField
+                                    label="Four-Corner role"
+                                    value={c.corner_role || ''}
+                                    placeholder="Four-Corner role"
+                                    options={CORNER_ROLE_OPTIONS}
+                                    allowCustom={false}
+                                    onCommit={(next) => onEditInline('corner_role', next)}
+                                    className={`${TAG_CLASS} text-gold-ink bg-gold-tint border-gold-edge`}
+                                />
+                            </>
+                        ) : (
+                            <>
+                                <span className={`${TAG_CLASS} text-ink-600 bg-inset border-edge-strong`}>
+                                    {c.role}
+                                </span>
+                                <span className={`${TAG_CLASS} text-gold-ink bg-gold-tint border-gold-edge`}>
+                                    {cornerRoleLabel(c.corner_role)}
+                                </span>
+                            </>
                         )}
                     </div>
                 </div>
@@ -252,7 +267,7 @@ export function CharacterCard({
                         <div className="flex justify-between items-center text-[10px] font-mono font-bold uppercase tracking-wider text-gold-ink">
                             <span>
                                 ⚖️ Four-Corner Dilemma Dynamic (
-                                {c.corner_role ? c.corner_role.replace(/_/g, ' ') : 'Web Reflection'})
+                                {cornerRoleLabel(c.corner_role) || 'Web Reflection'})
                             </span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-serif">

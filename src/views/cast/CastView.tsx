@@ -5,7 +5,7 @@
  */
 
 import type React from 'react';
-import { VIEW_LABELS } from '@/config';
+import { CORNER_DEFAULT_STORY_ROLE, VIEW_LABELS } from '@/config';
 import {
     CharacterCard,
     EditorialSubNav,
@@ -108,6 +108,157 @@ export function CastView({
     testAuditionCharacterVoice,
     stopAllAudioPlayback
 }: CastViewProps) {
+    const saveCastField = (c: CastCharacterRecord, i: number, field: string, newValue: string) => {
+        const isVoiceEdit =
+            field === 'vocal_cadence' ||
+            field === 'reference_text' ||
+            field === 'voice_seed';
+        const applyCastField = (prev: CastStory): CastStory | null => {
+            const newCast = [...(prev.cast || [])];
+            const targetIdx = findCastIndexForChar(newCast, c);
+            const idx = targetIdx !== -1 ? targetIdx : i;
+            if (!newCast[idx]) return null;
+            const targetChar: CastCharacterRecord &
+                Record<string, unknown> = {
+                ...newCast[idx]
+            };
+            const charName =
+                targetChar.name || `Character ${idx + 1}`;
+            const nextUserEdited: Record<string, boolean> = {
+                ...(prev.user_edited || {})
+            };
+            const nextCharacterStates: Record<
+                string,
+                Record<string, unknown>
+            > = {
+                ...(prev.character_states || {})
+            };
+
+            if (field === 'vocal_cadence') {
+                const cleaned = cleanCharacterNameFromVoiceProfile(
+                    String(newValue || '').trim(),
+                    [charName]
+                );
+                if (!cleaned) return null;
+                targetChar.vocal_cadence = cleaned;
+                targetChar.vocal_profile = cleaned;
+                targetChar.voice_profile = cleaned;
+                targetChar.voice_description = cleaned;
+                targetChar.user_edited_cadence = true;
+                targetChar.is_user_edited = true;
+                targetChar.user_edited = true;
+                if (
+                    targetChar.details &&
+                    typeof targetChar.details === 'object'
+                ) {
+                    targetChar.details = {
+                        ...targetChar.details,
+                        vocal_profile: cleaned
+                    };
+                }
+                if (nextCharacterStates[charName]) {
+                    nextCharacterStates[charName] = {
+                        ...nextCharacterStates[charName],
+                        vocal_cadence: cleaned
+                    };
+                }
+                nextUserEdited[`cast.${charName}.vocal_cadence`] = true;
+                nextUserEdited[`cast.${idx}.vocal_cadence`] = true;
+                nextUserEdited[`cast.${charName}`] = true;
+            } else if (field === 'reference_text') {
+                const cleanedRef = sanitizeVoiceReferenceText(
+                    String(newValue || '').trim()
+                );
+                if (!cleanedRef) {
+                    showToast(
+                        'Reference text cannot be empty',
+                        'warning'
+                    );
+                    return null;
+                }
+                targetChar.reference_text = cleanedRef;
+                targetChar.user_edited_reference_text = true;
+                targetChar.is_user_edited = true;
+                targetChar.user_edited = true;
+                nextUserEdited[`cast.${charName}.reference_text`] =
+                    true;
+                nextUserEdited[`cast.${idx}.reference_text`] = true;
+                nextUserEdited[`cast.${charName}`] = true;
+            } else if (field === 'voice_seed') {
+                const parsed = parseInt(
+                    String(newValue || '').replace(/[^0-9]/g, ''),
+                    10
+                );
+                if (!Number.isFinite(parsed) || parsed <= 0) {
+                    showToast(
+                        'Please enter a valid positive integer seed',
+                        'warning'
+                    );
+                    return null;
+                }
+                targetChar.voice_seed = parsed;
+                nextUserEdited[`cast.${charName}.voice_seed`] = true;
+            } else if (field.includes('.')) {
+                const [parent, child] = field.split('.');
+                const parentObj =
+                    (targetChar[parent] as Record<string, unknown>) ||
+                    {};
+                targetChar[parent] = {
+                    ...parentObj,
+                    [child]: newValue
+                };
+                if (
+                    field === 'details.deep_profile' &&
+                    !targetChar.user_edited_reference_text &&
+                    !nextUserEdited[`cast.${charName}.reference_text`]
+                ) {
+                    const refreshedRef =
+                        extractPersonalizedReferenceTextFromInterview(
+                            newValue
+                        );
+                    if (refreshedRef) {
+                        targetChar.reference_text = refreshedRef;
+                    }
+                }
+            } else {
+                targetChar[field] = newValue;
+            }
+
+            newCast[idx] = targetChar;
+            return {
+                ...prev,
+                cast: newCast,
+                character_states: nextCharacterStates,
+                user_edited: nextUserEdited
+            };
+        };
+
+        const baseCheck = storyRef.current || story;
+        const existingRefEdited = Boolean(
+            (c as unknown as Record<string, unknown>)
+                .user_edited_reference_text ||
+                baseCheck?.user_edited?.[
+                    `cast.${c.name}.reference_text`
+                ]
+        );
+        const affectsVoice =
+            isVoiceEdit ||
+            (field === 'details.deep_profile' && !existingRefEdited);
+        if (affectsVoice) {
+            commitVoiceEditUpdate(
+                c.name || `Character ${i + 1}`,
+                applyCastField
+            );
+        } else {
+            setStory((prev) => {
+                const updated = applyCastField(prev);
+                if (!updated) return prev;
+                storyRef.current = updated;
+                return updated;
+            });
+        }
+    };
+
     const handleIntroduceCharacter = () => {
         openFormModal({
             title: 'Introduce Character',
@@ -167,16 +318,7 @@ export function CastView({
                 if (!data.name || !data.name.trim()) return;
                 const name = data.name.trim();
                 const resolvedCorner = data.corner_role || 'SUPPORTING';
-                const defaultRole =
-                    resolvedCorner === 'MAIN_CHARACTER'
-                        ? 'Protagonist'
-                        : resolvedCorner === 'THE_CHALLENGER'
-                          ? 'Foil'
-                          : resolvedCorner === 'THE_COMFORTER'
-                            ? 'Confidant'
-                            : resolvedCorner === 'THE_WARNING'
-                              ? 'Opponent'
-                              : 'Supporting';
+                const defaultRole = CORNER_DEFAULT_STORY_ROLE[resolvedCorner] || 'Supporting';
                 const role = data.role && data.role.trim() ? data.role.trim() : defaultRole;
                 const archetype =
                     data.archetype && data.archetype.trim() ? data.archetype.trim() : 'Pragmatist';
@@ -299,157 +441,11 @@ export function CastView({
                                     handleResetCharacterReferenceText(c);
                                     return;
                                 }
-                                openEditModal(title, val || '', (newValue) => {
-                                    const isVoiceEdit =
-                                        field === 'vocal_cadence' ||
-                                        field === 'reference_text' ||
-                                        field === 'voice_seed';
-                                    const applyCastField = (prev: CastStory): CastStory | null => {
-                                        const newCast = [...(prev.cast || [])];
-                                        const targetIdx = findCastIndexForChar(newCast, c);
-                                        const idx = targetIdx !== -1 ? targetIdx : i;
-                                        if (!newCast[idx]) return null;
-                                        const targetChar: CastCharacterRecord &
-                                            Record<string, unknown> = {
-                                            ...newCast[idx]
-                                        };
-                                        const charName =
-                                            targetChar.name || `Character ${idx + 1}`;
-                                        const nextUserEdited: Record<string, boolean> = {
-                                            ...(prev.user_edited || {})
-                                        };
-                                        const nextCharacterStates: Record<
-                                            string,
-                                            Record<string, unknown>
-                                        > = {
-                                            ...(prev.character_states || {})
-                                        };
-
-                                        if (field === 'vocal_cadence') {
-                                            const cleaned = cleanCharacterNameFromVoiceProfile(
-                                                String(newValue || '').trim(),
-                                                [charName]
-                                            );
-                                            if (!cleaned) return null;
-                                            targetChar.vocal_cadence = cleaned;
-                                            targetChar.vocal_profile = cleaned;
-                                            targetChar.voice_profile = cleaned;
-                                            targetChar.voice_description = cleaned;
-                                            targetChar.user_edited_cadence = true;
-                                            targetChar.is_user_edited = true;
-                                            targetChar.user_edited = true;
-                                            if (
-                                                targetChar.details &&
-                                                typeof targetChar.details === 'object'
-                                            ) {
-                                                targetChar.details = {
-                                                    ...targetChar.details,
-                                                    vocal_profile: cleaned
-                                                };
-                                            }
-                                            if (nextCharacterStates[charName]) {
-                                                nextCharacterStates[charName] = {
-                                                    ...nextCharacterStates[charName],
-                                                    vocal_cadence: cleaned
-                                                };
-                                            }
-                                            nextUserEdited[`cast.${charName}.vocal_cadence`] = true;
-                                            nextUserEdited[`cast.${idx}.vocal_cadence`] = true;
-                                            nextUserEdited[`cast.${charName}`] = true;
-                                        } else if (field === 'reference_text') {
-                                            const cleanedRef = sanitizeVoiceReferenceText(
-                                                String(newValue || '').trim()
-                                            );
-                                            if (!cleanedRef) {
-                                                showToast(
-                                                    'Reference text cannot be empty',
-                                                    'warning'
-                                                );
-                                                return null;
-                                            }
-                                            targetChar.reference_text = cleanedRef;
-                                            targetChar.user_edited_reference_text = true;
-                                            targetChar.is_user_edited = true;
-                                            targetChar.user_edited = true;
-                                            nextUserEdited[`cast.${charName}.reference_text`] =
-                                                true;
-                                            nextUserEdited[`cast.${idx}.reference_text`] = true;
-                                            nextUserEdited[`cast.${charName}`] = true;
-                                        } else if (field === 'voice_seed') {
-                                            const parsed = parseInt(
-                                                String(newValue || '').replace(/[^0-9]/g, ''),
-                                                10
-                                            );
-                                            if (!Number.isFinite(parsed) || parsed <= 0) {
-                                                showToast(
-                                                    'Please enter a valid positive integer seed',
-                                                    'warning'
-                                                );
-                                                return null;
-                                            }
-                                            targetChar.voice_seed = parsed;
-                                            nextUserEdited[`cast.${charName}.voice_seed`] = true;
-                                        } else if (field.includes('.')) {
-                                            const [parent, child] = field.split('.');
-                                            const parentObj =
-                                                (targetChar[parent] as Record<string, unknown>) ||
-                                                {};
-                                            targetChar[parent] = {
-                                                ...parentObj,
-                                                [child]: newValue
-                                            };
-                                            if (
-                                                field === 'details.deep_profile' &&
-                                                !targetChar.user_edited_reference_text &&
-                                                !nextUserEdited[`cast.${charName}.reference_text`]
-                                            ) {
-                                                const refreshedRef =
-                                                    extractPersonalizedReferenceTextFromInterview(
-                                                        newValue
-                                                    );
-                                                if (refreshedRef) {
-                                                    targetChar.reference_text = refreshedRef;
-                                                }
-                                            }
-                                        } else {
-                                            targetChar[field] = newValue;
-                                        }
-
-                                        newCast[idx] = targetChar;
-                                        return {
-                                            ...prev,
-                                            cast: newCast,
-                                            character_states: nextCharacterStates,
-                                            user_edited: nextUserEdited
-                                        };
-                                    };
-
-                                    const baseCheck = storyRef.current || story;
-                                    const existingRefEdited = Boolean(
-                                        (c as unknown as Record<string, unknown>)
-                                            .user_edited_reference_text ||
-                                            baseCheck?.user_edited?.[
-                                                `cast.${c.name}.reference_text`
-                                            ]
-                                    );
-                                    const affectsVoice =
-                                        isVoiceEdit ||
-                                        (field === 'details.deep_profile' && !existingRefEdited);
-                                    if (affectsVoice) {
-                                        commitVoiceEditUpdate(
-                                            c.name || `Character ${i + 1}`,
-                                            applyCastField
-                                        );
-                                    } else {
-                                        setStory((prev) => {
-                                            const updated = applyCastField(prev);
-                                            if (!updated) return prev;
-                                            storyRef.current = updated;
-                                            return updated;
-                                        });
-                                    }
-                                });
+                                openEditModal(title, val || '', (newValue) =>
+                                    saveCastField(c, i, field, newValue)
+                                );
                             }}
+                            onEditInline={(field, value) => saveCastField(c, i, field, value)}
                         />
                     ))}
             </div>
