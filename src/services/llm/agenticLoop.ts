@@ -32,6 +32,7 @@ import type {
     LlmSuccessMetadata,
     OpenAICompatibleFullResult
 } from './types';
+import { costLogFields } from './callCost';
 import { noteModelUsageFrom } from './usageMeter';
 
 export const DEFAULT_PROMPT_LOG_CAP = LOG_AND_PROMPT_LIMITS.promptLogCap;
@@ -252,6 +253,8 @@ When done, call commit_scene_prose, or enclose your completed narrative inside <
                 promptTokens: initialEstPromptToks,
                 cachedTokens: null,
                 cacheWriteTokens: null,
+                costUsd: null,
+                costExact: false,
                 routedProvider: null,
                 responseTokens: null,
                 thinkingTokens: null,
@@ -292,6 +295,16 @@ When done, call commit_scene_prose, or enclose your completed narrative inside <
                               cachedTokens: metadata.cachedTokens ?? e.cachedTokens ?? null,
                               cacheWriteTokens:
                                   metadata.cacheWriteTokens ?? e.cacheWriteTokens ?? null,
+                              ...costLogFields({
+                                  provider: effectiveProvider,
+                                  model: metadata.modelUsed || model,
+                                  promptTokens: promptToks,
+                                  cachedTokens: metadata.cachedTokens,
+                                  cacheWriteTokens: metadata.cacheWriteTokens,
+                                  responseTokens: respToks,
+                                  thinkingTokens: thinkingToks,
+                                  reportedCost: metadata.reportedCost
+                              }),
                               routedProvider: metadata.routedProvider || e.routedProvider || null,
                               responseTokens: respToks,
                               thinkingTokens: thinkingToks,

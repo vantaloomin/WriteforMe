@@ -29,6 +29,7 @@ import {
 } from '@/components/icons';
 import { formatAllVerboseLogs, formatVerboseLogEntry, type VerboseLogEntry } from '@/domain/story';
 import { copyVerboseLogToClipboard, downloadVerboseLogFile } from '@/services/browser';
+import { LogCost, LogTotals } from './LogTotals';
 
 export type LogFilterKey = 'all' | 'calls' | 'validations' | 'delays' | 'audio' | 'errors' | string;
 
@@ -43,6 +44,8 @@ export interface LogsViewEntry extends VerboseLogEntry {
     tierName?: string;
     actionTaken?: string;
     cachedTokens?: number;
+    costUsd?: number | null;
+    costExact?: boolean;
     routedProvider?: string;
     modelRole?: string;
     modelSize?: string;
@@ -71,14 +74,6 @@ export function LogsView({
     storyTitle = 'EllipsisProse Project'
 }: LogsViewProps) {
     const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
-
-    const totalSentTokens = promptLog.reduce((acc, e) => acc + (e.promptTokens || 0), 0);
-    const totalThinkingTokens = promptLog.reduce(
-        (acc, e) => acc + (e.thinkingTokens || e.reasoningTokensUsed || 0),
-        0
-    );
-    const totalResponseTokens = promptLog.reduce((acc, e) => acc + (e.responseTokens || 0), 0);
-    const totalAllTokens = totalSentTokens + totalThinkingTokens + totalResponseTokens;
 
     const visibleLogs = promptLog.filter((entry) => {
         const isErr =
@@ -156,41 +151,7 @@ export function LogsView({
                     <span className="text-xs font-mono font-bold text-ink-500 bg-mist-100 px-3 py-1 rounded-full border border-edge-strong">
                         {promptLog.length} entries
                     </span>
-                    {totalSentTokens > 0 && (
-                        <span
-                            className="text-xs font-mono font-bold text-sage-800 bg-sage-tint px-2.5 py-1 rounded-full border border-sage-edge flex items-center gap-1"
-                            title="Total tokens sent to AI across all steps"
-                        >
-                            <ArrowUpRight size={11} className="text-sage-600" /> Sent:{' '}
-                            {totalSentTokens.toLocaleString()} tok
-                        </span>
-                    )}
-                    {totalThinkingTokens > 0 && (
-                        <span
-                            className="text-xs font-mono font-bold text-plum-800 bg-plum-tint px-2.5 py-1 rounded-full border border-plum-edge flex items-center gap-1"
-                            title="Total thinking / reasoning tokens generated"
-                        >
-                            <Brain size={11} className="text-plum-600" /> Think:{' '}
-                            {totalThinkingTokens.toLocaleString()} tok
-                        </span>
-                    )}
-                    {totalResponseTokens > 0 && (
-                        <span
-                            className="text-xs font-mono font-bold text-blue-800 bg-azure-tint px-2.5 py-1 rounded-full border border-azure-edge flex items-center gap-1"
-                            title="Total response tokens generated"
-                        >
-                            <MessageSquare size={11} className="text-blue-600" /> Resp:{' '}
-                            {totalResponseTokens.toLocaleString()} tok
-                        </span>
-                    )}
-                    {totalAllTokens > 0 && (
-                        <span
-                            className="text-xs font-mono font-bold text-ink-700 bg-inset px-2.5 py-1 rounded-full border border-edge-strong flex items-center gap-1"
-                            title="Total context & generation tokens (Sent + Think + Resp)"
-                        >
-                            Total: {totalAllTokens.toLocaleString()} tok
-                        </span>
-                    )}
+                    <LogTotals entries={promptLog} />
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2.5">
@@ -919,6 +880,7 @@ export function LogsView({
                                                         ).toLocaleString()}{' '}
                                                         tok
                                                     </span>
+                                                    <LogCost entry={entry} />
                                                 </div>
                                             )}
                                         </div>
