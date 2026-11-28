@@ -16,6 +16,8 @@ export interface InlineChoiceFieldProps {
     /** When false the value must be one of `options`. */
     allowCustom?: boolean;
     placeholder?: string;
+    /** Lets the writer clear the field by saving it empty. */
+    allowEmpty?: boolean;
     onCommit: (value: string) => void;
     /** Classes for the resting value, so it can look like a heading or a pill. */
     className?: string;
@@ -27,6 +29,7 @@ export function InlineChoiceField({
     options = [],
     allowCustom = true,
     placeholder,
+    allowEmpty = false,
     onCommit,
     className = ''
 }: InlineChoiceFieldProps) {
@@ -49,7 +52,7 @@ export function InlineChoiceField({
     };
     const commit = (next: string) => {
         const clean = next.trim();
-        if (clean && clean !== value) onCommit(clean);
+        if ((clean || allowEmpty) && clean !== value) onCommit(clean);
         close();
     };
     const commitDraft = () => {

@@ -8,6 +8,7 @@ A value of a few words is edited where it sits, not in the full-screen editor.
 | --- | --- |
 | `options` | The list to pick from. Leave out for plain text. |
 | `allowCustom` | `true` (default): any text is accepted and the list narrows while typing. `false`: only a listed value can be saved. |
+| `allowEmpty` | The field can be cleared by saving it empty. |
 | `className` | How the resting value looks (a heading, a tag). |
 
 ## Where it is used
@@ -18,7 +19,12 @@ On a character card (`CharacterCard`, through `onEditInline`):
 - **Role**: free text with the suggestions in `STORY_ROLE_PRESETS` (`src/config/cast.ts`). Existing roles such as "Student" stay as they are.
 - **Four-Corner role**: closed list, `CORNER_ROLE_OPTIONS`. The pipeline reads the stored values (`MAIN_CHARACTER`, `THE_CHALLENGER`, ...), so the card shows a label and saves the value.
 
-Longer fields (backstory, goals, voice) still open the full editor.
+On a scene:
+
+- **Scene title** in Scene Studio: plain text.
+- **POV character** in Scene Studio and on outline scene rows: free text, with the cast (Scene Studio) or the scene's characters (outline) as suggestions. It can be cleared.
+
+Longer fields (backstory, goals, setting, voice) still open the full editor.
 
 ## Adding one
 
