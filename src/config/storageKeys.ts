@@ -82,6 +82,7 @@ export const STORAGE_KEYS = {
     kokoroOptIn: 'kokoro_opt_in',
     librarySortBy: 'ellipsisprose_library_sort_by',
     libraryViewMode: 'ellipsisprose_library_view_mode',
+    logUsageOpen: 'ellipsisprose_log_usage_open',
     matrixView: 'ellipsisprose_matrix_view',
     nanoGptKey: 'ellipsisprose_nanogpt_key',
     nanoGptModel: 'ellipsisprose_nanogpt_model',
