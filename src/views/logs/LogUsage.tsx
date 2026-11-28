@@ -14,14 +14,19 @@ import { useState } from 'react';
 import { ChevronDown } from '@/components/icons';
 import { STORAGE_KEYS } from '@/config';
 import {
+    DEFAULT_STEP_SORT,
     filterUsage,
     formatCallCost,
     formatShare,
     formatTokenCount,
     isUsageFilterActive,
+    nextStepSort,
     NO_USAGE_FILTER,
+    sortSteps,
+    stepModelLabel,
     toggleUsageFilter,
     USAGE_PARTS,
+    type StepSortKey,
     type UsageEntry,
     type UsageFilter,
     type UsageFilterKind,
@@ -76,6 +81,7 @@ export interface LogUsageProps {
 export function LogUsage({ entries, filter = NO_USAGE_FILTER, onFilter }: LogUsageProps) {
     const [open, setOpen] = useState(readOpen);
     const [showAll, setShowAll] = useState(false);
+    const [sort, setSort] = useState(DEFAULT_STEP_SORT);
     const { all, shown } = filterUsage(entries, filter);
     if (all.calls <= 0) return null;
 
@@ -84,9 +90,32 @@ export function LogUsage({ entries, filter = NO_USAGE_FILTER, onFilter }: LogUsa
     const describe = (part: UsagePart): string =>
         `${PART_LABELS[part]}: ${shown.parts[part].toLocaleString()} tokens, ${formatShare(shown.parts[part] / (shown.tokens || 1))}`;
     // A picked step stays in view even when it is not among the largest.
-    const steps = showAll
-        ? all.steps
-        : all.steps.filter((step, index) => index < STEPS_SHOWN || filter.steps.includes(step.name));
+    const sorted = sortSteps(all.steps, sort);
+    // The cut to the largest few only makes sense in that order; any other sort shows every step.
+    const uncut = showAll || sort.key !== 'tokens';
+    const steps = uncut
+        ? sorted
+        : sorted.filter((step, index) => index < STEPS_SHOWN || filter.steps.includes(step.name));
+    /** A column heading that sorts the table; the arrow marks the column in use and its direction. */
+    const heading = (key: StepSortKey, label: string, cell: string) => (
+        <th className={`font-normal ${cell}`} aria-sort={sort.key !== key ? undefined : sort.descending ? 'descending' : 'ascending'}>
+            <button
+                type="button"
+                onClick={() => setSort(nextStepSort(sort, key))}
+                className={`relative py-3 sm:py-1.5 px-2 hover:text-ink-900 ${sort.key === key ? 'text-ink-900' : ''}`}
+                data-testid={`log-usage-sort-${key}`}
+            >
+                {label}
+                {sort.key === key && (
+                    <ChevronDown
+                        size={12}
+                        className={`absolute top-1/2 -translate-y-1/2 ${cell.includes('text-right') ? '-left-1.5' : '-right-1.5'} ${sort.descending ? '' : 'rotate-180'}`}
+                        aria-hidden="true"
+                    />
+                )}
+            </button>
+        </th>
+    );
     const anyCost = all.cost !== null;
     const manyModels = all.models.length > 1;
     const toggle = (): void => {
@@ -208,13 +237,11 @@ export function LogUsage({ entries, filter = NO_USAGE_FILTER, onFilter }: LogUsa
                     <table className="w-full text-sm">
                         <thead>
                             <tr className="text-xs text-ink-500 border-b border-edge">
-                                <th className="text-left font-normal py-1.5 px-2">Step</th>
-                                {manyModels && (
-                                    <th className="text-left font-normal py-1.5 px-2 hidden md:table-cell">Model</th>
-                                )}
-                                <th className="text-right font-normal py-1.5 px-2 hidden sm:table-cell">Calls</th>
-                                <th className="text-right font-normal py-1.5 px-2">Tokens</th>
-                                {anyCost && <th className="text-right font-normal py-1.5 px-2">Cost</th>}
+                                {heading('name', 'Step', 'text-left')}
+                                {manyModels && heading('model', 'Model', 'text-left hidden md:table-cell')}
+                                {heading('calls', 'Calls', 'text-right hidden sm:table-cell')}
+                                {heading('tokens', 'Tokens', 'text-right')}
+                                {anyCost && heading('cost', 'Cost', 'text-right')}
                                 <th className="text-right font-normal py-1.5 px-2 hidden sm:table-cell">Share</th>
                             </tr>
                         </thead>
@@ -227,7 +254,7 @@ export function LogUsage({ entries, filter = NO_USAGE_FILTER, onFilter }: LogUsa
                                         onClick={() => pick('steps', step.name)}
                                         className={`border-b border-edge last:border-b-0 cursor-pointer transition hover:bg-inset ${s === 'picked' ? 'bg-inset shadow-[inset_3px_0_0_var(--ink-900)]' : ''} ${s === 'muted' ? MUTED : ''}`}
                                     >
-                                        <td className={`px-2 text-ink-800 break-words ${s === 'picked' ? 'font-bold' : 'font-medium'}`}>
+                                        <td className={`pl-2 pr-0 sm:pr-2 text-ink-800 break-words ${s === 'picked' ? 'font-bold' : 'font-medium'}`}>
                                             <button
                                                 type="button"
                                                 className="block w-full py-3 sm:py-2 text-left"
@@ -245,26 +272,24 @@ export function LogUsage({ entries, filter = NO_USAGE_FILTER, onFilter }: LogUsa
                                                 className="py-2 px-2 font-mono text-xs text-ink-500 hidden md:table-cell"
                                                 title={step.models.join(', ')}
                                             >
-                                                {step.models.length === 1
-                                                    ? shortModel(step.models[0])
-                                                    : `${step.models.length} models`}
+                                                {shortModel(stepModelLabel(step))}
                                             </td>
                                         )}
-                                        <td className="py-2 px-2 text-right font-mono text-ink-500 hidden sm:table-cell">
+                                        <td className="py-2 pl-1 pr-2 sm:px-2 text-right font-mono text-ink-500 hidden sm:table-cell">
                                             {step.calls.toLocaleString()}
                                         </td>
                                         <td
-                                            className="py-2 px-2 text-right font-mono font-bold text-ink-900 whitespace-nowrap"
+                                            className="py-2 pl-1 pr-2 sm:px-2 text-right font-mono font-bold text-ink-900 whitespace-nowrap"
                                             title={`${step.tokens.toLocaleString()} tokens`}
                                         >
                                             {formatTokenCount(step.tokens)}
                                         </td>
                                         {anyCost && (
-                                            <td className="py-2 px-2 text-right font-mono text-ink-700 whitespace-nowrap">
+                                            <td className="py-2 pl-1 pr-2 sm:px-2 text-right font-mono text-ink-700 whitespace-nowrap">
                                                 {step.cost ? formatCallCost(step.cost) : ''}
                                             </td>
                                         )}
-                                        <td className="py-2 px-2 text-right font-mono text-ink-700 hidden sm:table-cell">
+                                        <td className="py-2 pl-1 pr-2 sm:px-2 text-right font-mono text-ink-700 hidden sm:table-cell">
                                             {formatShare(step.share)}
                                         </td>
                                     </tr>
@@ -272,7 +297,7 @@ export function LogUsage({ entries, filter = NO_USAGE_FILTER, onFilter }: LogUsa
                             })}
                         </tbody>
                     </table>
-                    {all.steps.length > STEPS_SHOWN && (
+                    {all.steps.length > STEPS_SHOWN && sort.key === 'tokens' && (
                         <button
                             type="button"
                             onClick={() => setShowAll((every) => !every)}

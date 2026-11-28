@@ -163,6 +163,47 @@ export function summarizeUsage(entries: ReadonlyArray<UsageEntry>): UsageSummary
     return { parts, tokens, calls, cost, steps, models: [...byModel.values()].sort(largestFirst) };
 }
 
+export const STEP_SORT_KEYS = ['name', 'model', 'calls', 'tokens', 'cost'] as const;
+export type StepSortKey = (typeof STEP_SORT_KEYS)[number];
+export interface StepSort {
+    key: StepSortKey;
+    descending: boolean;
+}
+
+/** How the table starts: the step that used the most first. */
+export const DEFAULT_STEP_SORT: StepSort = { key: 'tokens', descending: true };
+
+/** The same column again flips the direction; a new column starts where it reads best. */
+export function nextStepSort(current: StepSort, key: StepSortKey): StepSort {
+    if (current.key === key) return { key, descending: !current.descending };
+    return { key, descending: key !== 'name' && key !== 'model' };
+}
+
+/** What the Model column shows for a step: its one model, or how many it ran on. */
+export function stepModelLabel(step: StepUsage): string {
+    return step.models.length === 1 ? step.models[0] : `${step.models.length} models`;
+}
+
+/**
+ * Steps in the chosen order. A step with no cost goes last in both directions, since a blank
+ * means unknown or local, not cheapest. Ties fall back to largest first.
+ */
+export function sortSteps(steps: ReadonlyArray<StepUsage>, sort: StepSort): StepUsage[] {
+    const text = (a: string, b: string): number => a.localeCompare(b, undefined, { sensitivity: 'base' });
+    const direction = sort.descending ? -1 : 1;
+    const compare = (a: StepUsage, b: StepUsage): number => {
+        if (sort.key === 'name') return direction * text(a.name, b.name);
+        if (sort.key === 'model') return direction * text(stepModelLabel(a), stepModelLabel(b));
+        if (sort.key === 'calls') return direction * (a.calls - b.calls);
+        if (sort.key === 'cost') {
+            if (!a.cost || !b.cost) return Number(!a.cost) - Number(!b.cost);
+            return direction * (a.cost.usd - b.cost.usd);
+        }
+        return direction * (a.tokens - b.tokens);
+    };
+    return [...steps].sort((a, b) => compare(a, b) || b.tokens - a.tokens || text(a.name, b.name));
+}
+
 /** What the reader picked in the summary. An empty list means "any". */
 export interface UsageFilter {
     steps: string[];

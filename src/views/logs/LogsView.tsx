@@ -31,7 +31,7 @@ import { LogUsage } from './LogUsage';
 import { inLogTab, LogsHeader } from './LogsHeader';
 import { useLogUsage } from './useLogUsage';
 
-export type LogFilterKey = 'all' | 'calls' | 'validations' | 'delays' | 'audio' | 'errors' | string;
+export type LogFilterKey = 'all' | 'calls' | 'errors' | 'validations' | 'audio' | string;
 
 export interface LogsViewEntry extends VerboseLogEntry {
     id?: string | number;

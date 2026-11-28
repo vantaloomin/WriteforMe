@@ -271,6 +271,11 @@ describe('views/reader, views/logs, and recoverOrphanedLogs', () => {
             errorsTab?.click();
         });
         expect(setLogFilter).toHaveBeenCalledWith('errors');
+        const tabNames = Array.from(container.querySelectorAll('button[aria-pressed]'))
+            .map((b) => b.textContent?.replace(/\d+\+?$/, '').trim())
+            .filter((name) => ['all', 'calls', 'errors', 'validations', 'delays', 'audio'].includes(name || ''));
+        expect(tabNames).not.toContain('delays');
+        expect(tabNames.slice(0, 2)).toEqual(['all', 'calls']);
 
         // Re-render filtered to errors
         renderIntoRoot(
