@@ -25,7 +25,7 @@ export function CharacterPortrait({
 }: CharacterPortraitProps) {
     const inputRef = useRef<HTMLInputElement | null>(null);
     return (
-        <div className="w-[72px] md:w-24 shrink-0 space-y-2">
+        <div className="w-[72px] md:w-24 shrink-0 space-y-2 md:row-span-2">
             <div className="w-[72px] h-24 md:w-24 md:h-32 rounded-xl bg-gold-tint border border-gold-edge overflow-hidden flex items-center justify-center text-gold-ink font-bold font-serif text-2xl shadow-sm">
                 {src ? (
                     <img
