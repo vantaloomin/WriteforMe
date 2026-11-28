@@ -33,3 +33,11 @@ Longer fields (backstory, goals, objective, voice profile) still open the full e
 ## Adding one
 
 Render `InlineChoiceField` with the current value and save in `onCommit`. Put a list that more than one screen needs in `src/config`.
+
+## Role stays a label
+
+A model asked for a character's `<role>` often answers with a paragraph. `withShortRole`
+(`src/domain/cast/role.ts`) keeps `role` to a few words and moves the paragraph to the
+character's `summary`, which the card shows under the name. It runs where characters are
+created (story setup, characters spawned mid-story, directives), when a role is saved from the
+card, and when a saved story is opened, so older stories are repaired on load.

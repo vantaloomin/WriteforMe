@@ -17,6 +17,7 @@ import {
     type AudioStoryLike,
     type VoiceCastMember
 } from '@/domain/audio';
+import { splitCharacterRole, withShortRole } from '@/domain/cast';
 import {
     compareSceneCoordinates,
     ensureEpistemicGraph,
@@ -329,7 +330,10 @@ export async function executeDirectivePlan(
                     const newChar: Record<string, unknown> = {
                         id: `C_dyn_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
                         name: charNameToAdd,
-                        role: asString(auditedDetails.role) || 'Minor Character',
+                        ...splitCharacterRole(
+                            asString(auditedDetails.role) || 'Minor Character',
+                            auditedDetails.corner_role
+                        ),
                         ...(auditedDetails.corner_role
                             ? { corner_role: auditedDetails.corner_role }
                             : {}),
@@ -398,7 +402,7 @@ export async function executeDirectivePlan(
                         };
                         const charDetails = asRecord(charRec.details);
                         if (details.name) charRec.name = details.name;
-                        if (details.role) charRec.role = details.role;
+                        if (details.role) Object.assign(charRec, withShortRole({ ...charRec, role: details.role }));
                         if (details.corner_role) charRec.corner_role = details.corner_role;
                         [
                             'why_it_makes_sense',

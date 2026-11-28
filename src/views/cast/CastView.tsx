@@ -22,6 +22,7 @@ import {
     sanitizeVoiceReferenceText,
     type AudioStoryLike
 } from '@/domain/audio';
+import { splitCharacterRole, withShortRole } from '@/domain/cast';
 import { CAST_FILE_ACCEPT, useCastImport } from '@/hooks';
 import { CastBoardPanel } from './CastBoardPanel';
 import { DeadRecordPanel } from './DeadRecordPanel';
@@ -122,8 +123,7 @@ export function CastView({
                 Record<string, unknown> = {
                 ...newCast[idx]
             };
-            const charName =
-                targetChar.name || `Character ${idx + 1}`;
+            const charName = targetChar.name || `Character ${idx + 1}`;
             const nextUserEdited: Record<string, boolean> = {
                 ...(prev.user_edited || {})
             };
@@ -224,7 +224,7 @@ export function CastView({
                 targetChar[field] = newValue;
             }
 
-            newCast[idx] = targetChar;
+            newCast[idx] = field === 'role' ? withShortRole(targetChar) : targetChar;
             return {
                 ...prev,
                 cast: newCast,
@@ -319,7 +319,7 @@ export function CastView({
                 const name = data.name.trim();
                 const resolvedCorner = data.corner_role || 'SUPPORTING';
                 const defaultRole = CORNER_DEFAULT_STORY_ROLE[resolvedCorner] || 'Supporting';
-                const role = data.role && data.role.trim() ? data.role.trim() : defaultRole;
+                const role = splitCharacterRole(data.role?.trim() || defaultRole, resolvedCorner).role;
                 const archetype =
                     data.archetype && data.archetype.trim() ? data.archetype.trim() : 'Pragmatist';
 

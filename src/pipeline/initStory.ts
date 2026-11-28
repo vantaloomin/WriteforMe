@@ -16,6 +16,7 @@ import {
     type AudioStoryLike,
     type VoiceCastMember
 } from '@/domain/audio';
+import { withShortRole } from '@/domain/cast';
 import { createDefaultStoryTemplate } from '@/domain/lifecycle';
 import { buildUploadLoreChunks, computeLoreFingerprint } from '@/domain/lore';
 import {
@@ -496,12 +497,14 @@ Output Schema:
          C2: THE_CHALLENGER (The New Way / Foil who pushes C1 out of their shell)
          C3: THE_COMFORTER (The Safe Way / Warm validating ally who enables the Safety Habit)
          C4: THE_WARNING (The Cost / Opponent who took the Safety Habit too far)
-         C5-C6 (Optional): Additional supporting cast if needed. -->
+         C5-C6 (Optional): Additional supporting cast if needed.
+         <role> is ONLY a 1-3 word label (Protagonist, Ensemble Main, Antagonist, Love Interest, Mentor, Foil, Confidant, Supporting, Side, Minor). Never a sentence. The description of the character goes in <summary>. -->
     <brief>
       <id>C1</id>
       <name>Protagonist Name</name>
       <corner_role>MAIN_CHARACTER</corner_role>
-      <role>Protagonist. Role in the world, ordinary life, and primary conflict.</role>
+      <role>Protagonist</role>
+      <summary>Who they are: their place in the world, their ordinary life and their primary conflict (2-4 sentences).</summary>
       <core_flaw>Their Safety Habit (the believed lie or defense mechanism they rely on to protect themselves).</core_flaw>
       <why_it_makes_sense>Why this habit is understandable, sympathetic, and earned in their past or work.</why_it_makes_sense>
       <what_it_costs_them>The quiet toll, personal cost, or limitation this habit causes.</what_it_costs_them>
@@ -512,7 +515,8 @@ Output Schema:
       <id>C2</id>
       <name>Challenger Name</name>
       <corner_role>THE_CHALLENGER</corner_role>
-      <role>The Challenger / Foil / Love Interest. Pulls the protagonist out of their comfort zone.</role>
+      <role>Foil, Love Interest, Mentor or another 1-3 word label</role>
+      <summary>Who they are and how they pull the protagonist out of their comfort zone (2-4 sentences).</summary>
       <way_of_living>How they naturally live the opposite approach to C1's Safety Habit.</way_of_living>
       <why_it_is_appealing>Why their perspective is magnetic, refreshing, or challenging to C1.</why_it_is_appealing>
       <core_flaw>Their own distinct blind spot or personal struggle (never an infallible saint or therapist).</core_flaw>
@@ -523,7 +527,8 @@ Output Schema:
       <id>C3</id>
       <name>Comforter Name</name>
       <corner_role>THE_COMFORTER</corner_role>
-      <role>The Comforter / Safe Haven. Validates and comforts C1, but enables their limitation.</role>
+      <role>Confidant, Mentor, Supporting or another 1-3 word label</role>
+      <summary>Who they are and how they validate and comfort C1 while enabling their limitation (2-4 sentences).</summary>
       <shared_outlook>How they share, validate, or reinforce C1's Safety Habit.</shared_outlook>
       <why_they_are_tempting>The genuine warmth, loyalty, safety, or understanding they offer.</why_they_are_tempting>
       <the_hidden_trap>How their support quietly keeps C1 safe but trapped or stagnant.</the_hidden_trap>
@@ -535,7 +540,8 @@ Output Schema:
       <id>C4</id>
       <name>Warning Name</name>
       <corner_role>THE_WARNING</corner_role>
-      <role>The Warning / Living Mirror / Opponent. Shows what happens when the Safety Habit is taken too far.</role>
+      <role>Antagonist, Rival, Opponent or another 1-3 word label</role>
+      <summary>Who they are and how they show what happens when the Safety Habit is taken too far (2-4 sentences).</summary>
       <how_they_ended_up>How years of following this defensive path or extreme version shaped their life.</how_they_ended_up>
       <human_sympathy>Why they are deeply human and understandable rather than an arbitrary villain.</human_sympathy>
       <the_wake_up_call>The mirror they hold up to C1's future.</the_wake_up_call>
@@ -726,10 +732,11 @@ BEGIN DEVELOPING CONCEPTUAL FOUNDATION`;
                             extractTag(b, 'the_wake_up_call') || ''
                         );
 
-                        return {
+                        return withShortRole({
                             id,
                             name: decodedName,
                             role: decodedRole,
+                            summary: decodeXmlEntities(extractTag(b, 'summary') || ''),
                             core_flaw: decodedFlaw,
                             core_desire: decodedDesire,
                             vocal_cadence: isValidQwenVoiceProfile(cleanedCadence)
@@ -758,7 +765,7 @@ BEGIN DEVELOPING CONCEPTUAL FOUNDATION`;
                             how_they_ended_up: howEndedUp,
                             human_sympathy: humanSympathy,
                             the_wake_up_call: wakeUpCall
-                        };
+                        });
                     });
                     break;
                 }
@@ -1246,7 +1253,8 @@ ${startingCast.map((c) => `- ${c.name} (${c.role}${c.corner_role ? ` [${asString
 <char_id>${asString(char.id)}</char_id>
 <char_name>${char.name}</char_name>
 <brief_role>${char.role}</brief_role>
-${char.corner_role ? `<corner_role>${asString(char.corner_role)}</corner_role>\n` : ''}<core_flaw>${asString(char.core_flaw)}</core_flaw>
+${char.summary ? `<brief_summary>${asString(char.summary)}</brief_summary>
+` : ''}${char.corner_role ? `<corner_role>${asString(char.corner_role)}</corner_role>\n` : ''}<core_flaw>${asString(char.core_flaw)}</core_flaw>
 ${char.why_it_makes_sense ? `<why_it_makes_sense>${asString(char.why_it_makes_sense)}</why_it_makes_sense>\n` : ''}${char.what_it_costs_them ? `<what_it_costs_them>${asString(char.what_it_costs_them)}</what_it_costs_them>\n` : ''}${char.way_of_living ? `<way_of_living>${asString(char.way_of_living)}</way_of_living>\n` : ''}${char.why_it_is_appealing ? `<why_it_is_appealing>${asString(char.why_it_is_appealing)}</why_it_is_appealing>\n` : ''}${char.shared_outlook ? `<shared_outlook>${asString(char.shared_outlook)}</shared_outlook>\n` : ''}${char.the_hidden_trap ? `<the_hidden_trap>${asString(char.the_hidden_trap)}</the_hidden_trap>\n` : ''}${char.how_they_ended_up ? `<how_they_ended_up>${asString(char.how_they_ended_up)}</how_they_ended_up>\n` : ''}${char.the_wake_up_call ? `<the_wake_up_call>${asString(char.the_wake_up_call)}</the_wake_up_call>\n` : ''}<core_desire>${asString(char.core_desire)}</core_desire>
 <vocal_cadence>${asString(char.vocal_cadence)}</vocal_cadence>
 </character_briefs>
