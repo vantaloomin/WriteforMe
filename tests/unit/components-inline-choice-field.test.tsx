@@ -163,3 +163,36 @@ describe('InlineChoiceField allowEmpty', () => {
         container.remove();
     });
 });
+
+describe('InlineChoiceField renderResting', () => {
+    it('leaves the value to the caller and edits from the button it is handed', () => {
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+        const onOpen = vi.fn();
+        act(() =>
+            root.render(
+                <InlineChoiceField
+                    label="Scene title"
+                    value="Pier Four"
+                    onCommit={vi.fn()}
+                    renderResting={(edit) => (
+                        <>
+                            <span data-testid="open" onClick={onOpen}>
+                                Pier Four
+                            </span>
+                            <button onClick={edit}>edit</button>
+                        </>
+                    )}
+                />
+            )
+        );
+        act(() => (container.querySelector('[data-testid="open"]') as HTMLElement).click());
+        expect(onOpen).toHaveBeenCalledTimes(1);
+        expect(container.querySelector('input')).toBeNull();
+        act(() => container.querySelector('button')?.click());
+        expect((container.querySelector('input') as HTMLInputElement).value).toBe('Pier Four');
+        act(() => root.unmount());
+        container.remove();
+    });
+});

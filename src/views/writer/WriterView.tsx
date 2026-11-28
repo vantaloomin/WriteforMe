@@ -981,25 +981,18 @@ export const WriterView: React.FC<WriterViewProps> = ({
                         <span className="text-[9.5px] font-mono font-bold uppercase tracking-wider text-ink-400">
                             Stage Setting
                         </span>
-                        <button
-                            type="button"
-                            onClick={() =>
-                                openEditModal('Scene Setting', currentScene.setting || '', (val) =>
-                                    updateSceneBlueprint(selectedSequence, selectedScene, { setting: val })
-                                )
+                        <InlineChoiceField
+                            label="Stage setting"
+                            value={currentScene.setting || ''}
+                            placeholder="Unset"
+                            allowEmpty
+                            onCommit={(val) =>
+                                updateSceneBlueprint(selectedSequence, selectedScene, { setting: val })
                             }
-                            className="w-full text-left flex items-center justify-between gap-1.5 text-xs font-medium pt-0.5 cursor-pointer min-w-0"
-                            title={currentScene.setting || 'Edit Stage Setting'}
-                        >
-                            <span
-                                className={`truncate ${
-                                    currentScene.setting ? 'text-ink-900 font-medium' : 'text-ink-400'
-                                }`}
-                            >
-                                {currentScene.setting || 'Unset'}
-                            </span>
-                            <ChevronRight size={12} className="w-3.5 h-3.5 text-ink-400 shrink-0" />
-                        </button>
+                            className={`text-xs font-medium [&>span]:truncate ${
+                                currentScene.setting ? 'text-ink-900' : 'text-ink-400'
+                            }`}
+                        />
                     </div>
 
                     {/* Cell 6: Cast Present (Compact height & non-stretching inline + Add) */}

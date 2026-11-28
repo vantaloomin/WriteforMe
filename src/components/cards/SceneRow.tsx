@@ -224,26 +224,32 @@ export function SceneRow({
                                         enableNarrativeLenses ? 'text-gold-ink' : 'text-ink-400'
                                     }`}
                                 />
-                                <span
-                                    onClick={() => {
-                                        if (setSelectedSequence) setSelectedSequence(seqIdx);
-                                        setSelectedScene(si);
-                                        setView('writer');
-                                    }}
-                                    className="cursor-pointer hover:text-gold-ink transition-colors"
-                                    title="Open Scene View"
-                                >
-                                    {s.title || `Scene ${si + 1}`}
-                                </span>
-                                {openEditModal && (
-                                    <EditButton
-                                        title={`Scene ${s.number || si + 1} Title`}
-                                        value={s.title}
-                                        onSave={() =>
-                                            openFieldEdit('Title', s.title, (val) => ({ title: val }))
-                                        }
-                                    />
-                                )}
+                                <InlineChoiceField
+                                    label={`Scene ${s.number || si + 1} title`}
+                                    value={s.title || ''}
+                                    onCommit={(val) => applyPatch({ title: val }, 'Updated Title')}
+                                    renderResting={(edit) => (
+                                        <>
+                                            <span
+                                                onClick={() => {
+                                                    if (setSelectedSequence) setSelectedSequence(seqIdx);
+                                                    setSelectedScene(si);
+                                                    setView('writer');
+                                                }}
+                                                className="cursor-pointer hover:text-gold-ink transition-colors"
+                                                title="Open Scene View"
+                                            >
+                                                {s.title || `Scene ${si + 1}`}
+                                            </span>
+                                            {openEditModal && (
+                                                <EditButton
+                                                    title={`Scene ${s.number || si + 1} Title`}
+                                                    onSave={edit}
+                                                />
+                                            )}
+                                        </>
+                                    )}
+                                />
                             </h4>
 
                             {proseStale && (
@@ -310,19 +316,18 @@ export function SceneRow({
                                 )}
                             </span>
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-ink-700 bg-mist-100 border border-edge-strong px-2 py-0.5 rounded-md font-mono max-w-[260px]">
-                                <span className="truncate" title={s.setting || 'No setting'}>
-                                    Setting: {s.setting || 'Unset'}
-                                </span>
-                                {openEditModal && (
-                                    <EditButton
-                                        title="Setting"
-                                        value={s.setting}
-                                        onSave={() =>
-                                            openFieldEdit('Setting', s.setting, (val) => ({
-                                                setting: val
-                                            }))
-                                        }
+                                <span>Setting:</span>
+                                {openEditModal ? (
+                                    <InlineChoiceField
+                                        label="Setting"
+                                        value={s.setting || ''}
+                                        placeholder="Unset"
+                                        allowEmpty
+                                        onCommit={(val) => applyPatch({ setting: val }, 'Updated Setting')}
+                                        className="[&>span]:truncate"
                                     />
+                                ) : (
+                                    <span className="truncate">{s.setting || 'Unset'}</span>
                                 )}
                             </span>
                             {vsLabel && (
