@@ -26,6 +26,7 @@ import type { GeminiImageModelInfo, OpenRouterImageModelInfo } from '@/services/
 import { ImageStore } from '@/services/storage';
 import type { CastMember, SceneBlueprint } from '@/types';
 import { safeLocalStorageSet } from '@/utils';
+import { useImageApiKeys } from './useImageApiKeys';
 
 export type LoadedImagesMap = {
     cover?: string | null;
@@ -201,9 +202,7 @@ export function useStoryImages({
         }
     });
     const [isFetchingImageModels, setIsFetchingImageModels] = useState(false);
-    const [imageApiKey, setImageApiKey] = useState(
-        () => localStorage.getItem(STORAGE_KEYS.imageApiKey) || ''
-    );
+    const { imageApiKey, setImageApiKey } = useImageApiKeys(imageProvider);
     const [comfyUrl, setComfyUrl] = useState(
         () => localStorage.getItem(STORAGE_KEYS.comfyUrl) || DEFAULT_SERVICE_URLS.comfyui
     );
@@ -281,9 +280,6 @@ export function useStoryImages({
     useEffect(() => {
         safeLocalStorageSet(STORAGE_KEYS.imageModel, imageModel);
     }, [imageModel]);
-    useEffect(() => {
-        safeLocalStorageSet(STORAGE_KEYS.imageApiKey, imageApiKey);
-    }, [imageApiKey]);
     useEffect(() => {
         safeLocalStorageSet(STORAGE_KEYS.comfyUrl, comfyUrl);
     }, [comfyUrl]);
