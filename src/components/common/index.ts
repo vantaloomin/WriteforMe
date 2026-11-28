@@ -10,3 +10,4 @@ export * from './pipelineSteps';
 export * from './StoryResetDropdown';
 export * from './ToastNotification';
 export * from './UniversalModelSearch';
+export * from './InlineChoiceField';
