@@ -144,16 +144,16 @@ describe('usage filter', () => {
         const matching = (filter: UsageFilter): number => log.filter((e) => matchesUsageFilter(e, filter)).length;
         expect(matching(pick('models', 'claude-sonnet-5-5'))).toBe(1);
         expect(matching(pick('steps', 'Lore Section Distiller'))).toBe(2);
-        expect(matching(pick('parts', 'cacheRead'))).toBe(1);
-        expect(matching({ parts: ['cacheRead'], steps: ['Review'], models: [] })).toBe(0);
+        expect(matching({ steps: ['Review'], models: ['claude-opus-5-5'] })).toBe(0);
+        expect(matching({ steps: ['Review', 'Lore Section Distiller'], models: [] })).toBe(3);
     });
 
-    it('narrows the totals but keeps the unpicked rows of the list that was picked from', () => {
-        const usage = filterUsage(log, pick('models', 'claude-sonnet-5-5'));
-        expect(usage.calls).toBe(3);
+    it('narrows the totals and leaves the lists whole, so a pick cannot hide another', () => {
+        const usage = filterUsage(log, { steps: ['Review'], models: ['claude-sonnet-5-5'] });
         expect(usage.shown.calls).toBe(1);
-        expect(usage.models).toHaveLength(2);
-        expect(usage.steps.map((s) => s.name)).toEqual(['Review']);
+        expect(usage.all.calls).toBe(3);
+        expect(usage.all.models).toHaveLength(2);
+        expect(usage.all.steps).toHaveLength(2);
     });
 });
 
@@ -226,16 +226,20 @@ describe('log usage views', () => {
         expect(text('log-usage-cacheWrite')).toBe('7K');
         expect(text('log-total-cost')).toBe('≈ $0.350');
         expect(text('log-usage-models')).toContain('claude-opus-5-5');
-        expect(container.querySelector('tbody tr')?.textContent).toContain('claude-opus-5-5');
+        expect(container.querySelector('thead')?.textContent).not.toContain('Model');
         expect(container.querySelectorAll('tbody tr')).toHaveLength(5);
         expect(text('log-usage-more')).toBe('Show all 7 steps');
         click('[data-testid="log-usage-more"]');
         expect(container.querySelectorAll('tbody tr')).toHaveLength(7);
     });
 
-    it('filters by a clicked step, shows it picked, and clears', () => {
+    it('filters by a clicked step and model, marks them, keeps every row, and clears while closed', () => {
         localStorage.clear();
-        const entries = [claude({ function: 'Review' }), claude({ function: 'Planner' }), claude({ function: 'Planner' })];
+        const entries = [
+            claude({ function: 'Review', modelUsed: 'vendor/small-model' }),
+            claude({ function: 'Planner' }),
+            claude({ function: 'Planner' })
+        ];
         function Host() {
             const [filter, setFilter] = useState(NO_USAGE_FILTER);
             return <LogUsage entries={entries} filter={filter} onFilter={setFilter} />;
@@ -243,20 +247,39 @@ describe('log usage views', () => {
         act(() => root.render(<Host />));
         toggle();
         expect(text('log-usage-calls')).toContain('in 3 calls');
+        expect(text('log-usage-clear')).toBeUndefined();
+        expect(text('log-usage-models')).toContain('small-model');
+        expect(text('log-usage-models')).not.toContain('vendor/');
+
         click('tbody tr:nth-child(2) button');
         expect(text('log-usage-calls')).toContain('in 1 of 3 calls');
         expect(container.querySelectorAll('tbody tr')).toHaveLength(2);
         expect(container.querySelector('tbody tr:nth-child(2) button')?.getAttribute('aria-pressed')).toBe('true');
-        expect(container.querySelector('tbody tr:nth-child(1)')?.className).toContain('opacity-45');
+        expect(container.querySelector('tbody tr:nth-child(1)')?.className).toContain('opacity-60');
+        // The first row keeps its own, unfiltered figure.
+        expect(container.querySelector('tbody tr:nth-child(1)')?.textContent).toContain('24K');
+
+        click('[data-testid="log-usage-models"] li:nth-child(1) button');
+        expect(text('log-usage-calls')).toContain('in 0 of 3 calls');
+        expect(container.querySelectorAll('[data-testid="log-usage-models"] li')).toHaveLength(2);
+
+        toggle();
         click('[data-testid="log-usage-clear"]');
         expect(text('log-usage-calls')).toContain('in 3 calls');
+    });
+
+    it('shows the Model column only when more than one model ran', () => {
+        localStorage.clear();
+        act(() => root.render(<LogUsage entries={[claude(), claude({ modelUsed: 'other' })]} />));
+        toggle();
+        expect(container.querySelector('thead')?.textContent).toContain('Model');
     });
 
     it('leaves out the cost column when nothing is priced, and draws nothing for an empty log', () => {
         localStorage.clear();
         act(() => root.render(<LogUsage entries={[claude({ provider: 'koboldcpp', costUsd: null })]} />));
         toggle();
-        expect(container.querySelectorAll('thead th')).toHaveLength(5);
+        expect(container.querySelectorAll('thead th')).toHaveLength(4);
         expect(text('log-total-cost')).toBeUndefined();
         act(() => root.render(<LogUsage entries={[{ function: 'Delay' }]} />));
         expect(container.textContent).toBe('');

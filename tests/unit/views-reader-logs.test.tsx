@@ -235,7 +235,6 @@ describe('views/reader, views/logs, and recoverOrphanedLogs', () => {
             />
         );
 
-        expect(container.textContent).toContain('2 entries');
         const usagePart = (part: string): string | null | undefined =>
             container.querySelector(`[data-testid="log-usage-${part}"]`)?.textContent;
         expect(container.textContent).toContain('800 tokens in 1 call');
@@ -258,12 +257,12 @@ describe('views/reader, views/logs, and recoverOrphanedLogs', () => {
         expect(openLogDetailModal).toHaveBeenCalledWith('verbose', sampleLogs[0]);
 
         const exportBtn = Array.from(container.querySelectorAll('button')).find((b) =>
-            b.textContent?.includes('Export Log')
+            b.textContent?.trim() === 'Export'
         );
         act(() => {
             exportBtn?.click();
         });
-        expect(container.textContent).toContain('Formatted Text (.txt)');
+        expect(container.textContent).toContain('Text (.txt)');
 
         const errorsTab = Array.from(container.querySelectorAll('button')).find((b) =>
             b.textContent?.trim().startsWith('errors')
@@ -287,7 +286,13 @@ describe('views/reader, views/logs, and recoverOrphanedLogs', () => {
         expect(container.textContent).toContain('Audio Drama TTS');
         expect(container.textContent).not.toContain('Passed length and structure checks');
 
-        const clearBtn = container.querySelector('button[title="Clear logs"]') as HTMLButtonElement | null;
+        const clearBtn = container.querySelector('button[title="Clear log"]') as HTMLButtonElement | null;
+        act(() => {
+            clearBtn?.click();
+        });
+        // The first press only asks; the second one clears.
+        expect(setPromptLog).not.toHaveBeenCalled();
+        expect(clearBtn?.textContent).toContain('Clear all');
         act(() => {
             clearBtn?.click();
         });
