@@ -4,18 +4,13 @@
  * and Breeze 2 7-dimension voice profile + reference transcript inspection.
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
-    Loader2,
     MessageSquare,
     Minus,
     RefreshCw,
     RotateCcw,
-    Sparkles,
     Square,
-    Trash2,
-    Upload,
-    User,
     Volume2
 } from '@/components/icons';
 import {
@@ -32,10 +27,12 @@ import { parseMarkdown } from '@/utils';
 import { CORNER_ROLE_OPTIONS, cornerRoleLabel, STORY_ROLE_PRESETS } from '@/config';
 import { EditButton } from '../common/EditButton';
 import { InlineChoiceField } from '../common/InlineChoiceField';
+import { CharacterPortrait } from './CharacterPortrait';
 import { CharacterSheetPanel } from './CharacterSheetPanel';
 
 export interface CharacterCardCharacter extends VoiceCastMember {
     role?: string;
+    summary?: string;
     why_it_makes_sense?: string;
     what_it_costs_them?: string;
     way_of_living?: string;
@@ -103,7 +100,6 @@ export function CharacterCard({
     onRemovePortrait
 }: CharacterCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
-    const portraitInputRef = useRef<HTMLInputElement | null>(null);
     if (!c) return null;
 
     const resolvedVoiceProfile = getVoiceDescriptionForCharacter(c, story) || c.vocal_cadence || '';
@@ -133,83 +129,15 @@ export function CharacterCard({
 
     return (
         <div className="bg-surface rounded-2xl border border-edge overflow-hidden shadow-sm hover:shadow-md transition-all">
-            <div className="p-5 border-b border-edge bg-inset flex items-start gap-4">
-                <div className="w-[72px] md:w-24 shrink-0 space-y-2">
-                    <div className="w-[72px] h-24 md:w-24 md:h-32 rounded-xl bg-gold-tint border border-gold-edge overflow-hidden flex items-center justify-center text-gold-ink font-bold font-serif text-2xl shadow-sm">
-                        {portraitSrc ? (
-                            <img
-                                src={portraitSrc}
-                                alt={`Portrait of ${c.name || 'character'}`}
-                                className="w-full h-full object-cover"
-                            />
-                        ) : c.name ? (
-                            c.name.charAt(0).toUpperCase()
-                        ) : (
-                            <User size={24} />
-                        )}
-                    </div>
-                    <div className="flex flex-wrap items-center justify-center gap-2">
-                        {onGeneratePortrait && (
-                            <button
-                                type="button"
-                                title="Generate"
-                                aria-label={`Generate portrait for ${c.name}`}
-                                disabled={portraitLoading}
-                                onClick={() => onGeneratePortrait?.(c)}
-                                className="p-1.5 shrink-0 rounded-lg bg-surface border border-edge text-gold-ink hover:bg-gold-tint disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {portraitLoading ? (
-                                    <Loader2 size={14} className="animate-spin" />
-                                ) : (
-                                    <Sparkles size={14} />
-                                )}
-                            </button>
-                        )}
-                        {onUploadPortrait && (
-                            <button
-                                type="button"
-                                title="Upload"
-                                aria-label={`Upload portrait for ${c.name}`}
-                                disabled={portraitLoading}
-                                onClick={() => portraitInputRef.current?.click()}
-                                className="p-1.5 shrink-0 rounded-lg bg-surface border border-edge text-ink-600 hover:bg-gold-tint disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <Upload size={14} />
-                            </button>
-                        )}
-                        {portraitSrc && onRemovePortrait && (
-                            <button
-                                type="button"
-                                title="Remove"
-                                aria-label={`Remove portrait for ${c.name}`}
-                                disabled={portraitLoading}
-                                onClick={() => onRemovePortrait?.(c)}
-                                className="p-1.5 shrink-0 rounded-lg bg-surface border border-edge text-ink-600 hover:bg-gold-tint disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <Trash2 size={14} />
-                            </button>
-                        )}
-                        {!onGeneratePortrait && !onUploadPortrait && !onRemovePortrait && (
-                            <span className="p-1.5 rounded-lg bg-surface border border-edge text-ink-400">
-                                <User size={16} />
-                            </span>
-                        )}
-                    </div>
-                    {onUploadPortrait && (
-                        <input
-                            ref={portraitInputRef}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            disabled={portraitLoading}
-                            onChange={(event) => {
-                                const file = event.target.files?.[0];
-                                event.target.value = '';
-                                if (file && !portraitLoading) onUploadPortrait?.(c, file);
-                            }}
-                        />
-                    )}
-                </div>
+            <div className="p-5 border-b border-edge bg-inset grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-4 gap-y-3">
+                <CharacterPortrait
+                    name={c.name || ''}
+                    src={portraitSrc}
+                    loading={portraitLoading}
+                    onGenerate={onGeneratePortrait && (() => onGeneratePortrait(c))}
+                    onUpload={onUploadPortrait && ((file) => onUploadPortrait(c, file))}
+                    onRemove={onRemovePortrait && (() => onRemovePortrait(c))}
+                />
                 <div className="flex-1 min-w-0 space-y-3">
                     {onEditInline ? (
                         <InlineChoiceField
@@ -256,6 +184,19 @@ export function CharacterCard({
                         )}
                     </div>
                 </div>
+                {c.summary && (
+                    <div className="character-summary col-span-2 md:col-span-1 md:col-start-2 flex items-start gap-2">
+                        <p className="text-sm text-ink-600 leading-relaxed min-w-0 max-w-prose">{c.summary}</p>
+                        {onEdit && (
+                            <EditButton
+                                className="p-1 min-w-6 min-h-6 shrink-0"
+                                title="Summary"
+                                value={c.summary || ''}
+                                onSave={() => onEdit('summary', 'Summary', c.summary || '')}
+                            />
+                        )}
+                    </div>
+                )}
             </div>
 
             <div className="p-5 space-y-4">

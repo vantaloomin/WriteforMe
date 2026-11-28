@@ -96,6 +96,7 @@ export function characterBrief({ member, voice, scene, others, views }: Characte
     const who = [
         `Name: ${name}`,
         text(member.role) ? `Role in the story: ${text(member.role)}` : '',
+        text(member.summary) ? `Who you are: ${text(member.summary)}` : '',
         text(member.core_desire) ? `What you want most: ${text(member.core_desire)}` : '',
         text(member.core_flaw) ? `What gets in your way: ${text(member.core_flaw)}` : '',
         profile ? `In your own words:\n${profile.slice(0, CHARACTER_LINES_LIMITS.profileChars)}` : ''

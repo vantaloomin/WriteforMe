@@ -9,6 +9,7 @@ import {
     LEGACY_NARRATIVE_MODE_REDIRECTS,
     LEGACY_STORY_RECORD_ID
 } from '@/config';
+import { shortenCastRoles } from '@/domain/cast';
 import { ensureEpistemicGraph, type ContinuityStoryState } from '@/domain/continuity';
 import { computeStoryProgressMetrics } from '@/domain/story';
 import { migrateStoryToSequences } from './migration';
@@ -75,6 +76,7 @@ export interface HydratedStory {
  */
 export function hydrateStoredStory(stored: StoredStory, id: string): HydratedStory {
     const migrated = migrateStoryToSequences(stored);
+    if (Array.isArray(migrated?.cast)) migrated.cast = shortenCastRoles(migrated.cast);
     backfillSceneDefaults(migrated);
     const worldPrimer = stored.world_primer || migrated?.world_primer || null;
     return {
@@ -101,6 +103,7 @@ export function hydrateStoredStory(stored: StoredStory, id: string): HydratedSto
 export function hydrateFallbackStory(record: StoryRecordLike): HydratedStory {
     const data = record.data || {};
     const migrated = migrateStoryToSequences(data);
+    if (Array.isArray(migrated?.cast)) migrated.cast = shortenCastRoles(migrated.cast);
     const worldPrimer = record.data?.world_primer || migrated?.world_primer || null;
     return {
         migrated,

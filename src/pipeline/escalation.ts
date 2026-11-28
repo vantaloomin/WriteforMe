@@ -13,6 +13,7 @@ import {
     type AudioStoryLike,
     type VoiceCastMember
 } from '@/domain/audio';
+import { splitCharacterRole } from '@/domain/cast';
 import {
     applyCascadingNameReplacements as domainApplyCascadingNameReplacements,
     auditEntityNamesAndPlaces as domainAuditEntityNamesAndPlaces
@@ -241,7 +242,7 @@ async function runEscalation<TParsed = Record<string, unknown>>(
             const newChar: CastMember & Record<string, unknown> = {
                 id: brief.id || `C_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
                 name: briefName,
-                role: brief.role || 'Minor Character',
+                ...splitCharacterRole(brief.role || 'Minor Character'),
                 core_flaw: brief.core_flaw || 'Unspecified',
                 core_desire: brief.core_desire || 'Unspecified',
                 vocal_cadence: validBriefCadence,
