@@ -27,8 +27,8 @@ import {
     Wand2,
     X,
     Feather,
-    EditButton,
-    EditorialSubNav
+    EditorialSubNav,
+    InlineChoiceField
 } from '@/components';
 import {
     groupNarrativeModesForSelect,
@@ -246,6 +246,7 @@ export const WriterView: React.FC<WriterViewProps> = ({
     const writerSceneKey = `${selectedSequence}`;
     const writerBeatKey = `${selectedSequence}-${selectedScene}`;
     const seqScenes = (story.scenes?.[writerSceneKey] || []) as WriterSceneRecord[];
+    const castChoices = (story.cast || []).flatMap((c) => (c.name ? [{ value: c.name, label: c.name }] : []));
     const writerAudioState = getSceneAudioStatus(selectedSequence, selectedScene);
     const hasSavedAudio = writerAudioState.status !== 'none';
     const currentScene = seqScenes[selectedScene];
@@ -522,16 +523,15 @@ export const WriterView: React.FC<WriterViewProps> = ({
 
                 {/* Row 2: Title Left + 3 Square High-Priority Action Tiles Right (Write | Audio | Read) */}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3.5 pb-3.5 border-b border-edge">
-                    <h2 className="text-2xl sm:text-3xl font-serif font-bold text-ink-900 flex items-baseline gap-2 tracking-tight min-w-0 flex-1">
-                        <span className="truncate">{currentScene.title || `Scene ${selectedScene + 1}`}</span>
-                        <EditButton
-                            title="Scene Title"
+                    <h2 className="text-2xl sm:text-3xl font-serif font-bold text-ink-900 tracking-tight min-w-0 flex-1">
+                        <InlineChoiceField
+                            label="Scene title"
                             value={currentScene.title || ''}
-                            onSave={() =>
-                                openEditModal('Scene Title', currentScene.title || '', (val) =>
-                                    updateSceneBlueprint(selectedSequence, selectedScene, { title: val })
-                                )
+                            placeholder={`Scene ${selectedScene + 1}`}
+                            onCommit={(val) =>
+                                updateSceneBlueprint(selectedSequence, selectedScene, { title: val })
                             }
+                            className="px-1 -mx-1"
                         />
                     </h2>
 
@@ -823,42 +823,17 @@ export const WriterView: React.FC<WriterViewProps> = ({
                         <span className="text-[9.5px] font-mono font-bold uppercase tracking-wider text-ink-400">
                             POV Character
                         </span>
-                        <select
+                        <InlineChoiceField
+                            label="POV character"
                             value={currentScene.pov_character || ''}
-                            onChange={(e) => {
-                                if (e.target.value === '__CUSTOM__') {
-                                    openEditModal('POV Character', currentScene.pov_character || '', (val) =>
-                                        updateSceneBlueprint(selectedSequence, selectedScene, { pov_character: val })
-                                    );
-                                } else {
-                                    updateSceneBlueprint(selectedSequence, selectedScene, {
-                                        pov_character: e.target.value
-                                    });
-                                }
-                            }}
-                            className="w-full bg-transparent text-ink-900 font-semibold text-xs outline-none cursor-pointer pt-0.5 truncate"
-                            title="Change POV Character"
-                        >
-                            <option value="" className="bg-surface text-ink-900">
-                                Unset
-                            </option>
-                            {currentScene.pov_character &&
-                                !(story.cast || []).some(
-                                    (c) => c.name?.toLowerCase() === currentScene.pov_character?.toLowerCase()
-                                ) && (
-                                    <option value={currentScene.pov_character} className="bg-surface text-ink-900">
-                                        {currentScene.pov_character}
-                                    </option>
-                                )}
-                            {(story.cast || []).map((c, ci) => (
-                                <option key={ci} value={c.name} className="bg-surface text-ink-900">
-                                    {c.name}
-                                </option>
-                            ))}
-                            <option value="__CUSTOM__" className="bg-surface text-gold-ink">
-                                Custom POV name...
-                            </option>
-                        </select>
+                            placeholder="Unset"
+                            allowEmpty
+                            options={castChoices}
+                            onCommit={(val) =>
+                                updateSceneBlueprint(selectedSequence, selectedScene, { pov_character: val })
+                            }
+                            className="text-ink-900 font-semibold text-xs"
+                        />
                     </div>
 
                     {/* Cell 3: Narrative Lens + Active Toggle */}

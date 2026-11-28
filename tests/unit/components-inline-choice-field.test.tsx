@@ -136,3 +136,30 @@ describe('InlineChoiceField', () => {
         expect(cornerRoleLabel(undefined)).toBe('');
     });
 });
+
+describe('InlineChoiceField allowEmpty', () => {
+    it('lets a clearable field be saved empty', () => {
+        const container = document.createElement('div');
+        document.body.appendChild(container);
+        const root = createRoot(container);
+        const onCommit = vi.fn();
+        act(() =>
+            root.render(
+                <InlineChoiceField label="POV character" value="Maren" allowEmpty onCommit={onCommit} />
+            )
+        );
+        act(() => container.querySelector('button')?.click());
+        const input = container.querySelector('input') as HTMLInputElement;
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+        act(() => {
+            setter?.call(input, '');
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        act(() => {
+            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+        });
+        expect(onCommit).toHaveBeenCalledWith('');
+        act(() => root.unmount());
+        container.remove();
+    });
+});

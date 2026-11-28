@@ -20,6 +20,7 @@ import { groupNarrativeModesForSelect, resolveNarrativeModeId } from '@/config';
 import { parseValueShiftInput } from '@/domain/story';
 import { isSerializationPlaceholder } from '@/utils';
 import { EditButton } from '../common/EditButton';
+import { InlineChoiceField } from '../common/InlineChoiceField';
 
 export interface SceneRowData {
     number?: string | number;
@@ -292,17 +293,20 @@ export function SceneRow({
                                       : 'Reactive Sequel'}
                             </button>
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-ink-700 bg-mist-100 border border-edge-strong px-2 py-0.5 rounded-md font-mono">
-                                <span>POV: {s.pov_character || 'Unset'}</span>
-                                {openEditModal && (
-                                    <EditButton
-                                        title="POV Character"
-                                        value={s.pov_character}
-                                        onSave={() =>
-                                            openFieldEdit('POV Character', s.pov_character, (val) => ({
-                                                pov_character: val
-                                            }))
+                                <span>POV:</span>
+                                {openEditModal ? (
+                                    <InlineChoiceField
+                                        label="POV character"
+                                        value={s.pov_character || ''}
+                                        placeholder="Unset"
+                                        allowEmpty
+                                        options={castList.map((name) => ({ value: name, label: name }))}
+                                        onCommit={(val) =>
+                                            applyPatch({ pov_character: val }, 'Updated POV Character')
                                         }
                                     />
+                                ) : (
+                                    <span>{s.pov_character || 'Unset'}</span>
                                 )}
                             </span>
                             <span className="inline-flex items-center gap-1 text-xs font-medium text-ink-700 bg-mist-100 border border-edge-strong px-2 py-0.5 rounded-md font-mono max-w-[260px]">
