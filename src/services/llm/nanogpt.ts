@@ -29,8 +29,9 @@ interface NanoGPTApiResponse {
         completion_tokens?: number;
         reasoning_tokens?: number;
         completion_tokens_details?: { reasoning_tokens?: number };
-        prompt_tokens_details?: { cached_tokens?: number };
+        prompt_tokens_details?: { cached_tokens?: number; cache_write_tokens?: number };
         cache_read_input_tokens?: number;
+        cache_creation_input_tokens?: number;
     };
 }
 
@@ -265,6 +266,12 @@ export async function callNanoGPT(
                     Number(
                         usage.prompt_tokens_details?.cached_tokens ??
                             usage.cache_read_input_tokens ??
+                            0
+                    ) || 0,
+                cacheWriteTokens:
+                    Number(
+                        usage.prompt_tokens_details?.cache_write_tokens ??
+                            usage.cache_creation_input_tokens ??
                             0
                     ) || 0,
                 reasoningText,

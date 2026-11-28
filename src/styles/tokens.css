@@ -11,6 +11,12 @@
             /* Scandinavian Light / Folio Bianca System */
             --bg-void: #F7F5F0;
             /* Warm parchment canvas */
+            /* Usage bar parts: five hues in a fixed order, checked for colour-blind separation. */
+            --usage-input: #257de0;
+            --usage-cacheWrite: #f47230;
+            --usage-cacheRead: #00b894;
+            --usage-thinking: #f2a600;
+            --usage-output: #ee7fac;
             --bg-surface: #FFFFFF;
             /* Clean white surface */
             --bg-surface-elevated: #FFFFFF;
@@ -196,6 +202,11 @@
         [data-theme="dark"] {
             --bg-void: #141416;
             /* Warm deep obsidian / midnight studio */
+            --usage-input: #338ced;
+            --usage-cacheWrite: #e76624;
+            --usage-cacheRead: #00a888;
+            --usage-thinking: #d28e05;
+            --usage-output: #e24d8b;
             --bg-surface: #1E1E22;
             /* Elevated warm dark surface */
             --bg-surface-elevated: #26262C;

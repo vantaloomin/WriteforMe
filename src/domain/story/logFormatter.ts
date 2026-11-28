@@ -66,6 +66,8 @@ export interface VerboseLogEntry {
     reasoningTokensUsed?: number | null;
     responseTokens?: number | null;
     tokensUsed?: number | null;
+    cachedTokens?: number | null;
+    cacheWriteTokens?: number | null;
     costUsd?: number | null;
     costExact?: boolean;
     error?: string;
@@ -171,6 +173,12 @@ export function formatVerboseLogEntry(entry: VerboseLogEntry | null | undefined)
                 ? entry.tokensUsed.toLocaleString()
                 : 'N/A';
         lines.push(`Sent (Prompt) Tokens:     ${sentTok}`);
+        if (entry.cachedTokens && entry.cachedTokens > 0) {
+            lines.push(`  Read From Cache:        ${entry.cachedTokens.toLocaleString()}`);
+        }
+        if (entry.cacheWriteTokens && entry.cacheWriteTokens > 0) {
+            lines.push(`  Written To Cache:       ${entry.cacheWriteTokens.toLocaleString()}`);
+        }
         lines.push(`Thinking Tokens:          ${thinkTok.toLocaleString()}`);
         lines.push(`Response Output Tokens:   ${respTok}`);
         lines.push(`Total Tokens Used:        ${totalTok}`);
